@@ -1,0 +1,28 @@
+# 环境与密钥
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+.venv/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+
+# Claude 本地配置
+.claude/settings.local.json
+
+# 系统/编辑器
+.DS_Store
+.idea/
+.vscode/
+
+# 数据文件
+*.sqlite3
+*.dump
+*.sql.bak

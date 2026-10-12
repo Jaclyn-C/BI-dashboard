@@ -1,0 +1,2149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Partner Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: light;
+    --page:#f9f9f7; --surface:#fcfcfb;
+    --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,.10);
+    --series:#2a78d6; --series-soft:rgba(42,120,214,.10); --series-softer:rgba(42,120,214,.06);
+    --cat1:#2a78d6; --cat2:#eb6834; --cat3:#1baf7a; --cat4:#eda100;
+    --cat5:#e87ba4; --cat6:#008300; --cat7:#4a3aa7; --cat8:#e34948;
+    --good:#0ca30c; --good-text:#006300; --crit:#d03b3b; --warn:#fab219;
+    --inc:#2a78d6; --exc:#c8501f; --ad:#1baf7a;
+    --shadow:0 1px 2px rgba(0,0,0,.05), 0 2px 6px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      color-scheme: dark;
+      --page:#0d0d0d; --surface:#1a1a19;
+      --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,.10);
+      --series:#3987e5; --series-soft:rgba(57,135,229,.18); --series-softer:rgba(57,135,229,.10);
+      --cat1:#3987e5; --cat2:#d95926; --cat3:#199e70; --cat4:#c98500;
+      --cat5:#d55181; --cat6:#008300; --cat7:#9085e9; --cat8:#e66767;
+      --good-text:#0ca30c;
+      --inc:#3987e5; --exc:#e0743f; --ad:#199e70;
+      --shadow:0 1px 2px rgba(0,0,0,.4);
+    }
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scrollbar-gutter:stable}
+  body{
+    font-family:'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    background:var(--page); color:var(--ink);
+    font-size:14px; line-height:1.45;
+  }
+  .wrap{max-width:1240px;margin:0 auto;padding:16px 24px 48px}
+
+  /* ---------- app bar ---------- */
+  .appbar{display:flex;align-items:center;gap:16px;padding:14px 0 18px}
+  .appbar h1{font-size:22px;font-weight:500;letter-spacing:.1px}
+  .appbar .sub{color:var(--ink2);font-size:12.5px;margin-top:2px}
+  .appbar .spacer{flex:1}
+  .statusline{color:var(--muted);font-size:12.5px;display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--baseline);flex:none}
+  .dot.ok{background:var(--good)} .dot.err{background:var(--crit)}
+  .iconbtn{
+    width:40px;height:40px;border-radius:50%;border:none;background:transparent;color:var(--ink2);
+    font-size:18px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none;
+  }
+  .iconbtn:hover{background:var(--series-soft);color:var(--ink)}
+  .iconbtn:focus-visible, .chip:focus-visible, .field:focus-visible, .pagebtn:focus-visible{
+    outline:2px solid var(--series);outline-offset:2px;
+  }
+
+  /* ---------- filter row ---------- */
+  .filters{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .chip{
+    border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--ink2);
+    padding:7px 14px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;gap:6px;align-items:center;
+  }
+  .chip:hover{background:var(--series-softer)}
+  .chip[aria-pressed="true"]{background:var(--series-soft);color:var(--ink);border-color:transparent}
+  .chip[aria-pressed="true"]::before{content:'\2713';font-weight:700;font-size:13px;color:var(--series)}
+  .filters .gap{width:8px}
+  .field{
+    font:inherit;font-size:13px;color:var(--ink);background:var(--surface);
+    border:1px solid var(--baseline);border-radius:8px;padding:7px 10px;
+  }
+  .field:disabled{opacity:.5}
+  .filters label{color:var(--muted);font-size:12.5px}
+
+  /* ---------- banners ---------- */
+  .banner{border-radius:12px;padding:12px 16px;margin-bottom:12px;font-size:13px;display:flex;gap:10px;align-items:flex-start}
+  .banner .t{font-weight:500}
+  .banner.error{background:rgba(208,59,59,.10);color:var(--ink)}
+  .banner.error .ic{color:var(--crit)}
+  .banner.warn{background:rgba(250,178,25,.14);color:var(--ink)}
+  .banner.warn .ic{color:#8a6100}
+  @media (prefers-color-scheme: dark){ .banner.warn .ic{color:var(--warn)} }
+  .banner button{margin-left:auto;border:none;background:transparent;color:var(--series);font:inherit;font-weight:500;cursor:pointer;padding:2px 8px;border-radius:6px}
+  .banner button:hover{background:var(--series-soft)}
+
+  /* ---------- cards & KPI ---------- */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:20px}
+  .kpis{display:grid;grid-template-columns:minmax(260px,1.4fr) repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+  @media (max-width:900px){ .kpis{grid-template-columns:1fr 1fr} .kpis .hero{grid-column:1 / -1} }
+  .tile .label{font-size:12.5px;color:var(--ink2)}
+  .tile .value{font-size:26px;font-weight:500;margin-top:6px}
+  .tile .aux{font-size:12px;color:var(--muted);margin-top:4px}
+  .hero .value{font-size:52px;font-weight:700;line-height:1.1;letter-spacing:-.5px}
+  .hero .label{font-size:13px}
+  .hero .aux{font-size:12.5px;color:var(--ink2)}
+
+  /* ---------- chart cards ---------- */
+  .cardhead{display:flex;align-items:baseline;gap:12px;margin-bottom:6px;flex-wrap:wrap}
+  .cardhead h2{font-size:16px;font-weight:500}
+  .cardhead .sub{color:var(--muted);font-size:12.5px}
+  .cardhead .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+  .seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+  .seg button{border:none;background:transparent;color:var(--ink2);font:inherit;font-size:12.5px;padding:5px 12px;cursor:pointer}
+  .seg button[aria-pressed="true"]{background:var(--series-soft);color:var(--ink);font-weight:500}
+  .stack{display:grid;gap:16px;margin-bottom:16px}
+  .two{display:grid;grid-template-columns:3fr 2fr;gap:24px;align-items:start}
+  .pietwo{display:grid;grid-template-columns:280px 1fr;gap:28px;align-items:center}
+  .two > *, .pietwo > *, .kpis > *, .stack > *{min-width:0}
+  @media (max-width:900px){ .two, .pietwo{grid-template-columns:1fr} .pietwo{justify-items:center} }
+  .convtwo{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;margin-bottom:4px}
+  .convtwo > *{min-width:0}
+  .convpie{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .convpie .chartbox{max-width:240px}
+  .convpie-cap{font-size:12.5px;font-weight:500;color:var(--ink2);text-align:center}
+  @media (max-width:640px){ .convtwo{grid-template-columns:1fr} }
+  .convnote{margin-top:12px;font-size:12.5px;color:var(--ink2);display:flex;flex-direction:column;gap:4px}
+  td.delta-pos{color:var(--good-text)} td.delta-neg{color:var(--crit)}
+  tr.delta-flag td{background:rgba(250,178,25,.10)}
+  .chartbox{position:relative;width:100%}
+  .chartbox svg{display:block;width:100%}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:36px 0}
+  .loadingdim{opacity:.55;transition:opacity .2s}
+
+  svg text{font-family:'Roboto', system-ui, sans-serif}
+  .chartbox svg path, .chartbox svg rect:not(.bar-hit), .chartbox svg text{pointer-events:none}
+  .chartbox svg .slice{pointer-events:auto;cursor:pointer}
+  .chartbox svg .slice:focus{outline:none;filter:brightness(1.1)}
+  .chartbox svg .slice:hover{filter:brightness(1.1)}
+  .axis-label{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:12px;font-size:12.5px;color:var(--ink2)}
+  .legend .li{display:inline-flex;align-items:center;gap:7px}
+  .sw{display:inline-block;width:12px;height:12px;border-radius:3px;flex:none;vertical-align:-1px}
+  .bar-hit{fill:transparent;cursor:pointer}
+  .bar-hit:focus{outline:none}
+  .bar-hit:focus + path, .bar-hit:hover + path,
+  .bar-hit:focus + g, .bar-hit:hover + g{filter:brightness(1.12)}
+
+  /* ---------- tooltip ---------- */
+  .tip{
+    position:fixed;z-index:60;pointer-events:none;display:none;max-width:280px;
+    background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    box-shadow:0 6px 20px rgba(0,0,0,.20);padding:9px 12px;font-size:12.5px;color:var(--ink2);
+  }
+  .tip .head{color:var(--muted);font-size:11.5px;margin-bottom:4px}
+  .tip .row{display:flex;gap:10px;align-items:baseline;justify-content:space-between}
+  .tip .row .v{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+  .tip .key{display:inline-block;width:12px;height:0;border-top:3px solid var(--series);border-radius:2px;margin-right:6px;vertical-align:middle}
+
+  /* ---------- tables ---------- */
+  table{width:100%;border-collapse:collapse}
+  th{
+    text-align:left;font-size:11.5px;font-weight:500;color:var(--muted);letter-spacing:.3px;
+    padding:10px 12px;border-bottom:1px solid var(--grid);white-space:nowrap;
+  }
+  th.num, td.num{text-align:right}
+  td{padding:9px 12px;border-bottom:1px solid var(--grid);font-size:13.5px;vertical-align:middle}
+  td.num{font-variant-numeric:tabular-nums}
+  tbody tr:hover{background:var(--series-softer)}
+  tr:last-child td{border-bottom:none}
+  .mono{font-family:'Roboto Mono', ui-monospace, monospace;font-size:12.5px}
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover{color:var(--ink)}
+  th .arrow{font-size:10px}
+  .chip-status{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:500;white-space:nowrap}
+  .chip-status.completed{background:rgba(12,163,12,.12);color:var(--good-text)}
+  .chip-status.returned{background:rgba(208,59,59,.12);color:var(--crit)}
+  .muted{color:var(--muted)}
+  .tablewrap{overflow-x:auto}
+
+  .tablefoot{display:flex;align-items:center;gap:6px;justify-content:flex-end;padding-top:12px;color:var(--muted);font-size:12.5px}
+  .pagebtn{border:none;background:transparent;color:var(--ink2);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:15px}
+  .pagebtn:hover:not(:disabled){background:var(--series-soft)}
+  .pagebtn:disabled{opacity:.35;cursor:default}
+
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+  /* ---------- dataset switch & exports ---------- */
+  .dsbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .seg.big button{padding:9px 18px;font-size:13.5px}
+  .seg.big button[aria-pressed="true"]{background:var(--series-soft)}
+  .seg.big button[data-ds="included"][aria-pressed="true"]{box-shadow:inset 0 -3px 0 var(--inc)}
+  .seg.big button[data-ds="excluded"][aria-pressed="true"]{box-shadow:inset 0 -3px 0 var(--exc)}
+  .seg.big button[data-ds="all"][aria-pressed="true"]{box-shadow:inset 0 -3px 0 var(--ink2)}
+  .btn-tonal{
+    border:1px solid var(--border);border-radius:8px;background:transparent;color:var(--ink2);
+    font:inherit;font-size:12.5px;font-weight:500;padding:7px 13px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn-tonal:hover{background:var(--series-softer);color:var(--ink)}
+  .btn-tonal:focus-visible{outline:2px solid var(--series);outline-offset:2px}
+  .dsbar .push{margin-left:auto}
+
+  /* ---------- included / excluded rows ---------- */
+  tbody tr.row-excluded{background:repeating-linear-gradient(135deg,transparent,transparent 7px,var(--series-softer) 7px,var(--series-softer) 14px)}
+  tbody tr.row-excluded td{color:var(--muted)}
+  tbody tr.row-excluded td.mono{text-decoration:line-through;text-decoration-color:var(--baseline)}
+  tbody tr.row-excluded:hover{background:var(--series-soft)}
+  .chip-status.included{background:rgba(42,120,214,.14);color:var(--inc)}
+  .chip-status.excluded{background:rgba(235,104,52,.16);color:var(--exc)}
+  .swatch-line{display:inline-block;width:14px;height:0;border-top:3px solid currentColor;border-radius:2px;vertical-align:middle}
+
+  /* ---------- login dialog ---------- */
+  .scrim{
+    position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.42);
+    display:flex;align-items:center;justify-content:center;padding:24px;
+    backdrop-filter:blur(2px);
+  }
+  .scrim[hidden]{display:none}
+  .logincard{
+    background:var(--surface);border:1px solid var(--border);border-radius:24px;
+    box-shadow:0 12px 40px rgba(0,0,0,.30);padding:28px;width:100%;max-width:360px;
+    display:flex;flex-direction:column;gap:14px;
+  }
+  .logincard h2{font-size:20px;font-weight:500}
+  .loginsub{color:var(--ink2);font-size:13px;margin-top:-8px}
+  .tf{display:flex;flex-direction:column;gap:5px}
+  .tf span{font-size:12px;color:var(--ink2)}
+  .tf input{
+    font:inherit;color:var(--ink);background:transparent;
+    border:1px solid var(--baseline);border-radius:8px;padding:10px 12px;
+  }
+  .tf input:focus{outline:none;border-color:var(--series);box-shadow:0 0 0 1px var(--series)}
+  .loginerror{background:rgba(208,59,59,.10);color:var(--crit);border-radius:8px;padding:9px 12px;font-size:12.5px}
+  .btn-filled{
+    border:none;border-radius:999px;background:var(--series);color:#fff;
+    font:inherit;font-size:14px;font-weight:500;padding:11px 20px;cursor:pointer;margin-top:4px;
+  }
+  .btn-filled:hover{filter:brightness(1.08)}
+  .btn-filled:disabled{opacity:.6;cursor:default}
+  .btn-filled:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="appbar">
+    <div>
+      <h1 id="appTitle">Partner Dashboard</h1>
+      <div class="sub" id="appSub"></div>
+    </div>
+    <div class="spacer"></div>
+    <div class="statusline"><span class="dot" id="connDot"></span><span id="statusText"></span></div>
+    <button class="chip" id="langBtn" type="button">中文</button>
+    <button class="iconbtn" id="refreshBtn">&#x21bb;</button>
+    <button class="iconbtn" id="logoutBtn">&#x2b91;</button>
+  </header>
+
+  <nav class="filters" id="timeframeNav">
+    <button class="chip" data-preset="today"></button>
+    <button class="chip" data-preset="7d"></button>
+    <button class="chip" data-preset="14d"></button>
+    <button class="chip" data-preset="30d"></button>
+    <span class="gap"></span>
+    <label for="fromDate" id="fromLabel"></label>
+    <input class="field" type="date" id="fromDate">
+    <label for="toDate" id="toLabel"></label>
+    <input class="field" type="date" id="toDate">
+  </nav>
+
+  <div class="dsbar">
+    <div class="seg big" role="group" id="datasetSeg">
+      <button data-ds="included" aria-pressed="true"></button>
+      <button data-ds="excluded" aria-pressed="false"></button>
+      <button data-ds="all" aria-pressed="false"></button>
+    </div>
+    <button class="btn-tonal push" id="csvViewBtn" type="button">&#x2913; <span></span></button>
+    <button class="btn-tonal" id="csvAllBtn" type="button">&#x2913; <span></span></button>
+  </div>
+
+  <div id="banners"></div>
+
+  <main id="dashboard">
+    <section class="kpis" id="kpiSection">
+      <div class="card tile hero">
+        <div class="label" id="kpiTotalLabel"></div>
+        <div class="value" id="kpiTotal">–</div>
+        <div class="aux" id="kpiTotalAux"></div>
+      </div>
+      <div class="card tile">
+        <div class="label" id="kpiOrderRevLabel"></div>
+        <div class="value" id="kpiOrderRev">–</div>
+        <div class="aux" id="kpiOrderRevAux"></div>
+      </div>
+      <div class="card tile">
+        <div class="label" id="kpiExcludedRevLabel"></div>
+        <div class="value" id="kpiExcludedRev">–</div>
+        <div class="aux" id="kpiExcludedRevAux"></div>
+      </div>
+      <div class="card tile">
+        <div class="label" id="kpiAdRevLabel"></div>
+        <div class="value" id="kpiAdRev">–</div>
+        <div class="aux" id="kpiAdRevAux"></div>
+      </div>
+      <div class="card tile">
+        <div class="label" id="kpiGrossLabel"></div>
+        <div class="value" id="kpiGross">–</div>
+        <div class="aux" id="kpiGrossAux"></div>
+      </div>
+      <div class="card tile">
+        <div class="label" id="kpiOrdersLabel"></div>
+        <div class="value" id="kpiOrders">–</div>
+        <div class="aux" id="kpiOrdersAux"></div>
+      </div>
+      <div class="card tile">
+        <div class="label" id="kpiCountriesLabel"></div>
+        <div class="value" id="kpiCountries">–</div>
+        <div class="aux" id="kpiCountriesAux"></div>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <div class="cardhead">
+          <h2 id="dailyTitle"></h2>
+          <span class="sub" id="dailySub"></span>
+          <div class="right">
+            <div class="seg" role="group">
+              <button id="dailyViewChart" aria-pressed="true"></button>
+              <button id="dailyViewTable" aria-pressed="false"></button>
+            </div>
+          </div>
+        </div>
+        <div class="chartbox" id="dailyChart"></div>
+        <div class="tablewrap" id="dailyTable" hidden></div>
+      </section>
+
+      <section class="card">
+        <div class="cardhead">
+          <h2 id="dailyUsdTitle"></h2>
+          <span class="sub" id="dailyUsdSub"></span>
+        </div>
+        <div class="chartbox" id="dailyUsdChart"></div>
+        <div class="tablewrap" id="dailyUsdTable" hidden></div>
+      </section>
+
+      <section class="card">
+        <div class="cardhead">
+          <h2 id="adTitle"></h2>
+          <span class="sub" id="adSub"></span>
+        </div>
+        <div class="chartbox" id="adChart"></div>
+      </section>
+
+      <section class="card">
+        <div class="cardhead">
+          <h2 id="convTitle"></h2>
+          <span class="sub" id="convSub"></span>
+        </div>
+        <div class="convtwo">
+          <div class="convpie">
+            <div class="convpie-cap" id="convLegacyCap"></div>
+            <div class="chartbox" id="convLegacyPie"></div>
+          </div>
+          <div class="convpie">
+            <div class="convpie-cap" id="convServerCap"></div>
+            <div class="chartbox" id="convServerPie"></div>
+          </div>
+        </div>
+        <div class="legend" id="convLegend"></div>
+        <div class="tablewrap" id="convTable"></div>
+        <div class="convnote" id="convNote"></div>
+      </section>
+
+      <section class="card">
+        <div class="cardhead">
+          <h2 id="countryTitle"></h2>
+          <span class="sub" id="countrySub"></span>
+        </div>
+        <div class="two">
+          <div class="chartbox" id="countryChart"></div>
+          <div class="tablewrap" id="countryTable"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="cardhead">
+          <h2 id="ordersTitle"></h2>
+          <span class="sub" id="ordersSub"></span>
+          <div class="right">
+            <label class="visually-hidden" for="typeFilter" id="typeFilterLabel"></label>
+            <select class="field" id="typeFilter"></select>
+            <label class="visually-hidden" for="currencyFilter" id="currencyFilterLabel"></label>
+            <select class="field" id="currencyFilter"></select>
+            <label class="visually-hidden" for="statusFilter" id="statusFilterLabel"></label>
+            <select class="field" id="statusFilter"></select>
+          </div>
+        </div>
+        <div class="tablewrap" id="ordersTable"></div>
+        <div class="tablefoot" id="ordersFoot"></div>
+      </section>
+    </div>
+  </main>
+
+</div>
+
+<div class="tip" id="tip" role="status"></div>
+
+<div class="scrim" id="loginScrim" hidden>
+  <form class="logincard" id="loginForm" aria-labelledby="loginTitle">
+    <h2 id="loginTitle"></h2>
+    <p class="loginsub" id="loginSub"></p>
+    <label class="tf">
+      <span id="loginUserLabel"></span>
+      <input type="text" id="loginUser" autocomplete="username" required minlength="3">
+    </label>
+    <label class="tf">
+      <span id="loginPassLabel"></span>
+      <input type="password" id="loginPass" autocomplete="current-password" required minlength="10">
+    </label>
+    <div class="loginerror" id="loginError" role="alert" hidden></div>
+    <button class="btn-filled" id="loginSubmit" type="submit"></button>
+  </form>
+</div>
+
+<script>
+'use strict';
+
+/* ================= configuration ================= */
+
+// Revenue share per order class: orders the partner API returns are credited at
+// 20%, the ones it filters out (visible only upstream) at 70%.
+const SHARE = { included: 0.20, excluded: 0.70 };
+
+const CONFIG = {
+  API_BASE: 'https://api.tfctechnology.com',
+  PAGE_SIZE: 1000,      // requested page size (the filtered endpoint caps each response at 100 rows)
+  MAX_SPLIT_DEPTH: 6,   // when a window reports hasMore, bisect it up to this many times
+  FETCH_CONCURRENCY: 4, // parallel day requests
+  MAX_RANGE_DAYS: 92,
+  TABLE_PAGE_SIZE: 25,
+  EP_FILTERED: '/data/partner/order/report',
+};
+
+// ---------------------------------------------------------------------------
+// Upstream partner (CPS) credentials, and a partner-platform login for this
+// dashboard's own /auth/login.
+//
+// The upstream switched auth to OAuth 2.0 client credentials (2026-09): the
+// dashboard fetches an access token from POST /open/oauth2/token (HTTP Basic
+// clientId:clientSecret) and sends `Authorization: Bearer <token>` on every
+// upstream call — mirroring partner-adapter/partner_client.py.
+//
+// !! SECURITY !! Anything filled in here is readable by every person who can
+// open this file, and it is sent from the browser. This mirrors the backend's
+// PARTNER_CLIENT_ID / PARTNER_CLIENT_SECRET. Kept out of git via
+// /visualisation.html in .gitignore — do not remove that entry while these are
+// filled in. Both can still be overridden per session without editing the file:
+//   visualisation.html#clientId=<id>&clientSecret=<secret>&user=<name>&pass=<pw>
+// The upstream host must also send CORS headers for this origin (token endpoint
+// included), otherwise the browser blocks the request and only the filtered
+// partner report will load.
+// ---------------------------------------------------------------------------
+const UPSTREAM = {
+  BASE: 'https://adminapi.netshort.com/prod-api/cps',
+  CLIENT_ID: 'REDACTED-CLIENT-ID',
+  CLIENT_SECRET: 'REDACTED-CLIENT-SECRET',
+};
+const CREDENTIALS = {
+  USERNAME: 'REDACTED-USER',
+  PASSWORD: 'REDACTED-PASSWORD',
+};
+
+const HASH_PARAMS = new URLSearchParams(location.hash.slice(1));
+// Optional override for local testing: open the file as visualisation.html#api=http://localhost:8123
+const API_BASE = HASH_PARAMS.get('api') || CONFIG.API_BASE;
+const UPSTREAM_BASE = (HASH_PARAMS.get('upstream') || UPSTREAM.BASE).replace(/\/+$/, '');
+const LOGIN_USERNAME = HASH_PARAMS.get('user') || CREDENTIALS.USERNAME;
+const LOGIN_PASSWORD = HASH_PARAMS.get('pass') || CREDENTIALS.PASSWORD;
+const UPSTREAM_CLIENT_ID = HASH_PARAMS.get('clientId') || UPSTREAM.CLIENT_ID;
+const UPSTREAM_CLIENT_SECRET = HASH_PARAMS.get('clientSecret') || HASH_PARAMS.get('secret') || UPSTREAM.CLIENT_SECRET;
+const UPSTREAM_READY = Boolean(UPSTREAM_BASE && UPSTREAM_CLIENT_ID && UPSTREAM_CLIENT_SECRET);
+
+/* ================= i18n ================= */
+
+const I18N = {
+  en: {
+    _locale: 'en-US', _other: '中文',
+    appTitle: 'Partner Dashboard',
+    subIncluded: 'Filtered order report · {p} revenue share',
+    subExcluded: 'Excluded (missing) orders · {p} revenue share',
+    subAll: 'All upstream orders · included at {p} + excluded at {q}',
+    signedOut: 'Signed out', loadingDays: 'Loading {a}/{b} days…', loading: 'Loading…',
+    updated: 'Updated {t} · {n} orders', connFailed: 'Connection failed',
+    refresh: 'Refresh data', signOut: 'Sign out', langSwitch: 'Switch to Chinese',
+    tfLabel: 'Time frame', today: 'Today', d7: 'Last 7 days', d14: 'Last 14 days', d30: 'Last 30 days',
+    from: 'From', to: 'To',
+    dsIncluded: 'Filtered orders (20%)', dsExcluded: 'Missing orders (70%)', dsAll: 'All orders',
+    dsGroup: 'Order set',
+    csvView: 'Current view (CSV)', csvAll: 'All orders (CSV)',
+    kpiTotal: 'Total revenue (USD)',
+    kpiTotalAux: 'orders {o} + ad revenue {a} · {from} – {to}',
+    kpiOrderRev: 'Filtered order revenue ({p})',
+    kpiOrderRevAux: '{p} of {g} gross · {n} orders',
+    kpiExcludedRev: 'Missing order revenue ({p})',
+    kpiExcludedRevAux: '{p} of {g} gross · {n} orders',
+    kpiAdRev: 'Ad revenue (USD)', kpiAdRevAux: '{n} days reported',
+    kpiGross: 'Gross revenue (USD)', kpiGrossAux: 'completed orders in current view',
+    kpiOrders: 'Orders (current view)', kpiCountries: 'Countries',
+    plusReturned: '+ {n} returned', noReturns: 'no returns', topCountry: 'top: {n}',
+    dailyTitle: 'Earnings per day',
+    dailyEst: 'estimated (static FX)',
+    dailyUsd: 'reported USD',
+    dailySubCur: 'Revenue share on completed orders, stacked by currency',
+    dailySubType: 'Revenue share on completed orders, stacked by order class (included 20% / excluded 70%)',
+    adTitle: 'Ad revenue per day', adSub: 'Daily ad revenue for new users of this channel, USD',
+    currencyTitle: 'Revenue by currency', currencySub: 'Share of gross revenue in the timeframe · completed orders, est. USD',
+    convTitle: 'Revenue by currency',
+    convSub: 'Old (native amount × static FX table from export_orders.py) vs new (the USD amount the upstream now reports) · completed orders in view',
+    convLegacyCap: 'Old · native amount × static FX rate',
+    convServerCap: 'New · upstream-reported USD (usdOrderAmount)',
+    convHNative: 'Native amount', convHLegacy: 'Old USD (static FX)', convHServer: 'New USD (upstream)',
+    convHDelta: 'Δ (new − old)', convHDeltaPct: 'Δ %', convRate: 'Rate → USD',
+    convNoRate: 'no static rate',
+    convNoRateNote: 'No legacy FX rate for: ',
+    convNoRateNoteBody: ' — excluded from the old total, exactly as export_orders.py does.',
+    convNoServerNote: '{n} completed order(s) carried no upstream USD amount — excluded from the new total.',
+    convMatch: 'Old and new totals agree within 0.5% ({d}).',
+    convDiff: 'Old and new totals differ by {d} ({p} of the new total).',
+    convEmpty: 'No completed orders with an amount in the selected period.',
+    convTotalRow: 'TOTAL',
+    countryTitle: 'Revenue by country', countrySub: 'Traffic origin (order language) · completed orders, USD',
+    ordersTitle: 'Orders', ordersSub: '{n} of {m} orders in range',
+    view: 'View', chart: 'Chart', table: 'Table',
+    hDate: 'Date', hOrders: 'Orders', hGross: 'Gross (USD)', hEarnings: 'Earnings (USD)',
+    hByCurrency: 'Earnings by currency', hCurrency: 'Currency', hShare: 'Share', hCountry: 'Country',
+    hCurAmount: 'Currency · amount', hEstUsd: 'USD', hOrderId: 'Order ID', hAmount: 'Amount',
+    hStatus: 'Status', hClass: 'Class', hAdRevenue: 'Ad revenue', hColor: 'Color',
+    stCompleted: 'Completed', stReturned: 'Returned', clIncluded: 'Included', clExcluded: 'Excluded',
+    fAllCurrencies: 'All currencies', fAllStatuses: 'All statuses', fAllClasses: 'All classes',
+    empty: 'No orders in the selected period.', noMatch: 'No orders match the current filters.',
+    errTitle: 'Data could not be loaded. ', retry: 'Retry',
+    partialTitle: 'Partial data: ',
+    partialBody: 'some time windows still exceeded the API row cap after splitting; totals may be slightly low.',
+    noRateTitle: 'No USD amount reported for: ',
+    noRateBody: ' — those orders are excluded from USD totals.',
+    adFailTitle: 'Ad revenue unavailable: ',
+    upstreamFailTitle: 'Upstream order feed unavailable: ',
+    upstreamFailBody: ' Only the filtered partner report is shown — excluded orders cannot be identified.',
+    upstreamMissing: 'upstream clientId/clientSecret is not configured in this file',
+    upstreamCors: 'the browser could not reach the upstream host (network, or missing CORS headers)',
+    upstreamBadBody: 'the upstream response could not be read',
+    loginTitle: 'Sign in', loginSub: 'Use your Partner Platform account to load the revenue report.',
+    loginUser: 'Username', loginPass: 'Password', loginSubmit: 'Sign in', loginBusy: 'Signing in…',
+    loginInvalid: 'Invalid username or password.',
+    loginExpired: 'Your session expired — please sign in again.',
+    netError: 'Could not reach the API (network problem, or the API does not allow cross-origin requests).',
+    corsError: 'Could not reach the API. Check your network connection — and the API must allow cross-origin (CORS) requests for this page.',
+    prevPage: 'Previous page', nextPage: 'Next page', pageOf: '{a}–{b} of {n}',
+    grossLbl: 'Gross', earningsLbl: 'Earnings', shareLbl: 'Share', ordersLbl: 'Orders',
+    adRevenueLbl: 'Ad revenue', unknownCountry: 'Unknown', other: 'Other ({n})',
+    csvHeaders: ['orderId', 'createTime', 'theaterId', 'chapterId', 'country', 'language',
+      'currency', 'amount', 'estUsd', 'class', 'revShare', 'earningsUsd', 'status', 'promotionCode'],
+  },
+  zh: {
+    _locale: 'zh-CN', _other: 'EN',
+    appTitle: '合作方数据看板',
+    subIncluded: '已过滤订单报表 · 分成比例 {p}',
+    subExcluded: '被剔除（缺失）订单 · 分成比例 {p}',
+    subAll: '全部上游订单 · 已过滤 {p} + 被剔除 {q}',
+    signedOut: '未登录', loadingDays: '正在加载 {a}/{b} 天…', loading: '加载中…',
+    updated: '更新于 {t} · {n} 笔订单', connFailed: '连接失败',
+    refresh: '刷新数据', signOut: '退出登录', langSwitch: '切换到英文',
+    tfLabel: '时间范围', today: '今天', d7: '近 7 天', d14: '近 14 天', d30: '近 30 天',
+    from: '开始', to: '结束',
+    dsIncluded: '已过滤订单（20%）', dsExcluded: '缺失订单（70%）', dsAll: '全部订单',
+    dsGroup: '订单集合',
+    csvView: '当前视图（CSV）', csvAll: '全部订单（CSV）',
+    kpiTotal: '总收入（美元）',
+    kpiTotalAux: '订单 {o} + 广告 {a} · {from} – {to}',
+    kpiOrderRev: '已过滤订单收入（{p}）',
+    kpiOrderRevAux: '总额 {g} 的 {p} · {n} 笔订单',
+    kpiExcludedRev: '缺失订单收入（{p}）',
+    kpiExcludedRevAux: '总额 {g} 的 {p} · {n} 笔订单',
+    kpiAdRev: '广告收入（美元）', kpiAdRevAux: '已上报 {n} 天',
+    kpiGross: '订单总额（美元）', kpiGrossAux: '当前视图中的已完成订单',
+    kpiOrders: '订单数（当前视图）', kpiCountries: '国家/地区',
+    plusReturned: '另有 {n} 笔退款', noReturns: '无退款', topCountry: '最高：{n}',
+    dailyTitle: '每日收入',
+    dailyEst: '估算（固定汇率）',
+    dailyUsd: '上游美元',
+    dailySubCur: '已完成订单的分成收入，按币种堆叠',
+    dailySubType: '已完成订单的分成收入，按订单类别堆叠（已计入 20% / 被剔除 70%）',
+    adTitle: '每日广告收入', adSub: '该渠道纯新用户的每日广告收益，美元',
+    currencyTitle: '按币种划分的收入', currencySub: '时间范围内订单总额占比 · 已完成订单，预估美元',
+    convTitle: '按币种划分的收入',
+    convSub: '旧（原币金额 × export_orders.py 固定汇率表）vs 新（上游现在返回的美元金额）· 当前范围内已完成订单',
+    convLegacyCap: '旧 · 原币金额 × 固定汇率',
+    convServerCap: '新 · 上游返回美元（usdOrderAmount）',
+    convHNative: '原币金额', convHLegacy: '旧美元（固定汇率）', convHServer: '新美元（上游）',
+    convHDelta: 'Δ（新 − 旧）', convHDeltaPct: 'Δ %', convRate: '汇率 → 美元',
+    convNoRate: '无固定汇率',
+    convNoRateNote: '缺少固定汇率的币种：',
+    convNoRateNoteBody: ' —— 与 export_orders.py 一致，这些币种不计入旧算法合计。',
+    convNoServerNote: '有 {n} 笔已完成订单没有上游美元金额 —— 不计入新算法合计。',
+    convMatch: '旧、新合计相差在 0.5% 以内（{d}）。',
+    convDiff: '旧、新合计相差 {d}（占新算法合计的 {p}）。',
+    convEmpty: '所选时间范围内没有带金额的已完成订单。',
+    convTotalRow: '合计',
+    countryTitle: '按国家/地区划分的收入', countrySub: '流量来源（订单语种）· 已完成订单，美元',
+    ordersTitle: '订单明细', ordersSub: '范围内 {m} 笔订单中的 {n} 笔',
+    view: '视图', chart: '图表', table: '表格',
+    hDate: '日期', hOrders: '订单数', hGross: '总额（美元）', hEarnings: '分成收入（美元）',
+    hByCurrency: '按币种分成收入', hCurrency: '币种', hShare: '占比', hCountry: '国家/地区',
+    hCurAmount: '币种 · 金额', hEstUsd: '美元', hOrderId: '订单编号', hAmount: '金额',
+    hStatus: '状态', hClass: '类别', hAdRevenue: '广告收入', hColor: '颜色',
+    stCompleted: '已完成', stReturned: '已退款', clIncluded: '已计入', clExcluded: '被剔除',
+    fAllCurrencies: '全部币种', fAllStatuses: '全部状态', fAllClasses: '全部类别',
+    empty: '所选时间范围内没有订单。', noMatch: '没有符合当前筛选条件的订单。',
+    errTitle: '数据加载失败。', retry: '重试',
+    partialTitle: '数据不完整：',
+    partialBody: '部分时间窗口在拆分后仍超出接口行数上限，合计值可能偏低。',
+    noRateTitle: '缺少美元金额：',
+    noRateBody: ' —— 这些订单不计入美元合计。',
+    adFailTitle: '广告收入不可用：',
+    upstreamFailTitle: '上游订单数据不可用：',
+    upstreamFailBody: ' 仅显示已过滤的合作方报表 —— 无法识别被剔除的订单。',
+    upstreamMissing: '本文件中未配置上游 clientId/clientSecret',
+    upstreamCors: '浏览器无法访问上游主机（网络问题，或缺少 CORS 响应头）',
+    upstreamBadBody: '无法解析上游返回内容',
+    loginTitle: '登录', loginSub: '使用您的合作平台账号加载收入报表。',
+    loginUser: '用户名', loginPass: '密码', loginSubmit: '登录', loginBusy: '登录中…',
+    loginInvalid: '用户名或密码错误。',
+    loginExpired: '登录状态已过期，请重新登录。',
+    netError: '无法访问接口（网络问题，或接口不允许跨域请求）。',
+    corsError: '无法访问接口。请检查网络连接 —— 并确认接口允许本页面的跨域（CORS）请求。',
+    prevPage: '上一页', nextPage: '下一页', pageOf: '第 {a}–{b} 条，共 {n} 条',
+    grossLbl: '总额', earningsLbl: '分成收入', shareLbl: '占比', ordersLbl: '订单数',
+    adRevenueLbl: '广告收入', unknownCountry: '未知', other: '其他（{n}）',
+    csvHeaders: ['订单编号', '创建时间', '短剧ID', '章节ID', '国家/地区', '语种',
+      '币种', '金额', '预估美元', '类别', '分成比例', '分成收入(美元)', '状态', '推广码'],
+  },
+};
+
+let LANG = 'en';
+try { LANG = localStorage.getItem('vis_lang') === 'zh' ? 'zh' : 'en'; } catch (e) { /* storage unavailable */ }
+
+function t(key, vars) {
+  let str = I18N[LANG][key];
+  if (str === undefined) str = I18N.en[key] ?? key;
+  if (typeof str !== 'string' || !vars) return str;
+  return str.replace(/\{(\w+)\}/g, (m, k) => (vars[k] === undefined ? m : String(vars[k])));
+}
+
+/* ================= state ================= */
+
+const state = {
+  preset: '7d',
+  start: null,            // Date (00:00 local) of first day
+  end: null,              // Date (00:00 local) of last day
+  orders: [],             // deduped upstream orders, each tagged with _excluded
+  adDaily: new Map(),     // 'YYYY-MM-DD' -> ad revenue in USD minor units
+  adError: null,
+  upstreamError: null,
+  dataset: 'included',    // included | excluded | all
+  truncated: false,       // a sub-window still reported hasMore at max split depth
+  unknownCurrencies: new Set(),
+  error: null,
+  errorMessage: '',
+  loading: false,
+  tableCurrency: 'all',
+  tableStatus: 'all',
+  tableClass: 'all',
+  tableSort: { key: 'date', dir: 'desc' },
+  tablePage: 0,
+  dailyView: 'chart',
+};
+const dayCache = new Map(); // 'YYYY-MM-DD' -> {orders, truncated}
+const adCache = new Map();  // 'start|end' -> Map(dayKey -> usd minor)
+
+/* ================= helpers ================= */
+
+const $ = id => document.getElementById(id);
+
+// Rebuilt on language change so numbers, dates and country names follow the UI language.
+let usdFmt, usdWhole, nativeFmt, intFmt, dayLabelFmt, regionNames;
+function buildFormatters() {
+  const loc = I18N[LANG]._locale;
+  usdFmt = new Intl.NumberFormat(loc, { style: 'currency', currency: 'USD' });
+  usdWhole = new Intl.NumberFormat(loc, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+  nativeFmt = new Intl.NumberFormat(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  intFmt = new Intl.NumberFormat(loc);
+  dayLabelFmt = new Intl.DateTimeFormat(loc, { month: 'short', day: 'numeric' });
+  regionNames = null;
+  try { regionNames = new Intl.DisplayNames([loc], { type: 'region' }); } catch (e) { /* fallback below */ }
+}
+buildFormatters();
+
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v);
+  }
+  for (const kid of kids.flat()) {
+    if (kid == null) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function s(tag, attrs, ...kids) {
+  const el = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) el.setAttribute(k, v);
+  for (const kid of kids.flat()) {
+    if (kid == null) continue;
+    el.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  }
+  return el;
+}
+
+const pad = n => String(n).padStart(2, '0');
+const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const apiStamp = d => `${dateKey(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+function parseDateInput(v) { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d); }
+function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+function todayStart() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+function listDays(start, end) {
+  const out = [];
+  for (let d = new Date(start); d <= end; d = addDays(d, 1)) out.push(dateKey(d));
+  return out;
+}
+
+function countryOf(language) {
+  const lang = String(language || '').trim();
+  if (!lang) return t('unknownCountry');
+  const m = lang.match(/[_-]([A-Za-z]{2})$/);
+  if (!m) return lang;
+  if (regionNames) {
+    try { return regionNames.of(m[1].toUpperCase()) || lang; } catch (e) { return lang; }
+  }
+  return m[1].toUpperCase();
+}
+
+function isReturned(order) { return String(order.refundTime || '').trim() !== ''; }
+function isExcluded(order) { return order._excluded === true; }
+function shareOf(order) { return isExcluded(order) ? SHARE.excluded : SHARE.included; }
+function amountMinor(order) { const v = parseFloat(order.amount); return Number.isFinite(v) ? v : 0; }
+// -> USD minor units (cents), or null when the source didn't report one.
+// No local currency conversion: every order carries its own USD amount already
+// computed server-side, just under a different key depending on which fetch it
+// came from — `usdOrderAmount` for orders from the filtered partner report
+// (api.tfctechnology.com -> gateway -> partner-adapter, which renames it from
+// upstream's own field), `orderAmount` for orders fetched directly from upstream.
+function usdMinor(order) {
+  const usd = parseFloat(order.usdOrderAmount ?? order.orderAmount);
+  return Number.isFinite(usd) ? usd : null;
+}
+
+// ---------------------------------------------------------------------------
+// Legacy currency conversion — a faithful port of the static table in
+// adapters/partner-adapter/export_orders.py (USD_RATES, "1 unit -> USD",
+// rough Aug-2026 estimates). Kept only so the "old vs new" comparison card can
+// reproduce what that exporter would have reported. Everything else on this
+// dashboard uses the upstream's own USD amount (usdMinor) and never this table.
+// ---------------------------------------------------------------------------
+const LEGACY_USD_RATES = {
+  AED: 0.272, AUD: 0.65, BRL: 0.185, CAD: 0.73, CHF: 1.24, CLP: 0.00105,
+  CZK: 0.048, EUR: 1.17, GBP: 1.35, HKD: 0.128, IDR: 0.000061, INR: 0.0114,
+  JPY: 0.0068, KRW: 0.00072, MXN: 0.054, MYR: 0.24, NGN: 0.00065, PHP: 0.0175,
+  QAR: 0.275, SAR: 0.267, SGD: 0.78, THB: 0.031, TRY: 0.024, TWD: 0.033,
+  USD: 1, VND: 0.000038, ZAR: 0.056,
+};
+
+// Same output unit as usdMinor (upstream minor units), or null when the order's
+// currency has no entry in the static table — export_orders.py drops those from
+// the USD total too.
+function usdMinorLegacy(order) {
+  const native = parseFloat(order.amount);
+  if (!Number.isFinite(native)) return null;
+  const rate = LEGACY_USD_RATES[String(order.currencyType || 'USD').toUpperCase()];
+  return rate === undefined ? null : native * rate;
+}
+
+const dollars = minor => usdFmt.format(minor / 100);
+const pct = v => Math.round(v * 100) + '%';
+
+/* ================= CSV export ================= */
+
+function csvCell(value) {
+  const str = value === null || value === undefined ? '' : String(value);
+  // Guard against spreadsheet formula injection in exported cells.
+  const safe = /^[=+\-@\t\r]/.test(str) ? "'" + str : str;
+  return /[",\n\r]/.test(safe) ? '"' + safe.replace(/"/g, '""') + '"' : safe;
+}
+
+function ordersToCsv(orders) {
+  const lines = [I18N[LANG].csvHeaders.map(csvCell).join(',')];
+  for (const o of orders) {
+    const usd = usdMinor(o);
+    const share = shareOf(o);
+    lines.push([
+      o.orderId ?? '', o.createTime ?? '', o.theaterId ?? '', o.chapterId ?? '',
+      countryOf(o.language), o.language ?? '', o.currencyType ?? '',
+      (amountMinor(o) / 100).toFixed(2),
+      usd == null ? '' : (usd / 100).toFixed(2),
+      isExcluded(o) ? t('clExcluded') : t('clIncluded'),
+      pct(share),
+      usd == null ? '' : (usd * share / 100).toFixed(2),
+      isReturned(o) ? t('stReturned') : t('stCompleted'),
+      o.promotionCode ?? '',
+    ].map(csvCell).join(','));
+  }
+  return lines.join('\r\n');
+}
+
+function downloadCsv(filename, text) {
+  // BOM keeps Excel from mangling UTF-8 (currency symbols, Chinese headers).
+  const blob = new Blob(['\ufeff' + text], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = h('a', { href: url, download: filename });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+/* ================= API & auth ================= */
+
+class AuthError extends Error {}
+const TOKEN_KEY = 'vis_token::' + API_BASE;
+let token = null;
+try { token = sessionStorage.getItem(TOKEN_KEY); } catch (e) { /* storage unavailable */ }
+
+async function login(username, password) {
+  let res;
+  try {
+    res = await fetch(API_BASE + '/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+  } catch (err) {
+    throw new Error(t('netError'));
+  }
+  if (res.status === 401 || res.status === 403 || res.status === 422) {
+    throw new AuthError(t('loginInvalid'));
+  }
+  if (!res.ok) throw new Error(`Login failed (HTTP ${res.status}).`);
+  token = (await res.json()).access_token;
+  try { sessionStorage.setItem(TOKEN_KEY, token); } catch (e) { /* keep in memory only */ }
+}
+
+function clearToken() {
+  token = null;
+  try { sessionStorage.removeItem(TOKEN_KEY); } catch (e) { /* ignore */ }
+}
+
+async function api(path, body) {
+  if (!token) throw new AuthError('');
+  const res = await fetch(API_BASE + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 401) {
+    clearToken();
+    throw new AuthError(t('loginExpired'));
+  }
+  if (!res.ok) throw new Error(`API ${path} failed (HTTP ${res.status})`);
+  const payload = await res.json();
+  if (payload.code !== 200) throw new Error(`API ${path}: ${payload.msg || 'code ' + payload.code}`);
+  return payload;
+}
+
+/* ---------- upstream (CPS) OAuth2 client ---------- */
+
+class UpstreamError extends Error {}
+
+// Client-credentials access token, cached and refreshed ~60s before expiry —
+// mirrors partner-adapter/partner_client.py._AccessTokenProvider.
+const upstreamToken = { value: null, expiresAt: 0 };
+
+async function getUpstreamToken(forceRefresh) {
+  if (!forceRefresh && upstreamToken.value && Date.now() < upstreamToken.expiresAt - 60000) {
+    return upstreamToken.value;
+  }
+  let res;
+  try {
+    res = await fetch(UPSTREAM_BASE + '/open/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + btoa(UPSTREAM_CLIENT_ID + ':' + UPSTREAM_CLIENT_SECRET),
+      },
+      body: 'grant_type=client_credentials',
+    });
+  } catch (err) {
+    throw new UpstreamError(t('upstreamCors'));
+  }
+  if (!res.ok) throw new UpstreamError(`token HTTP ${res.status}`);
+  let payload;
+  try { payload = await res.json(); } catch (err) { throw new UpstreamError(t('upstreamBadBody')); }
+  const tok = payload && payload.data && (payload.data.accessToken || payload.data.access_token);
+  if (!payload || payload.code !== 200 || !tok) {
+    throw new UpstreamError((payload && payload.msg) || t('upstreamBadBody'));
+  }
+  const ttlSec = Number(payload.data.expiresIn ?? payload.data.expires_in ?? 3600);
+  upstreamToken.value = tok;
+  upstreamToken.expiresAt = Date.now() + (Number.isFinite(ttlSec) ? ttlSec : 3600) * 1000;
+  return tok;
+}
+
+async function upstreamPost(path, body, _retried) {
+  if (!UPSTREAM_READY) throw new UpstreamError(t('upstreamMissing'));
+  const token = await getUpstreamToken(false);
+  let res;
+  try {
+    res = await fetch(UPSTREAM_BASE + path, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    throw new UpstreamError(t('upstreamCors'));
+  }
+  if (res.status === 401 && !_retried) {
+    upstreamToken.value = null;
+    await getUpstreamToken(true);
+    return upstreamPost(path, body, true);
+  }
+  if (!res.ok) throw new UpstreamError(`HTTP ${res.status}`);
+  let payload;
+  try { payload = await res.json(); } catch (err) { throw new UpstreamError(t('upstreamBadBody')); }
+  // The upstream keeps HTTP 200 and signals an expired/rotated token via code 401.
+  if (payload && payload.code === 401 && !_retried) {
+    upstreamToken.value = null;
+    await getUpstreamToken(true);
+    return upstreamPost(path, body, true);
+  }
+  if (!payload || payload.code !== 200) {
+    throw new UpstreamError((payload && payload.msg) || t('upstreamBadBody'));
+  }
+  return payload;
+}
+
+/* ---------- windowed fetching ---------- */
+
+// The filtered endpoint caps each response at 100 rows and upstream pagination is
+// unusable, so on hasMore we bisect the time window instead of paging.
+async function fetchFilteredWindow(start, end, depth) {
+  const payload = await api(CONFIG.EP_FILTERED, {
+    startDate: apiStamp(start), endDate: apiStamp(end),
+    page: 1, pageSize: CONFIG.PAGE_SIZE,
+  });
+  const data = payload.data || {};
+  const orders = Array.isArray(data.list) ? data.list : [];
+  if (!data.hasMore) return { orders, truncated: false };
+  if (depth >= CONFIG.MAX_SPLIT_DEPTH || end - start < 120000) return { orders, truncated: true };
+  const mid = new Date(Math.floor((start.getTime() + end.getTime()) / 2000) * 1000);
+  const [a, b] = await Promise.all([
+    fetchFilteredWindow(start, mid, depth + 1),
+    fetchFilteredWindow(new Date(mid.getTime() + 1000), end, depth + 1),
+  ]);
+  return { orders: a.orders.concat(b.orders), truncated: a.truncated || b.truncated };
+}
+
+// Upstream reports no hasMore flag, so a full page is treated as "maybe truncated".
+async function fetchUpstreamWindow(start, end, depth) {
+  const payload = await upstreamPost('/open/order/list', {
+    startDate: apiStamp(start), endDate: apiStamp(end),
+    page: 1, pageSize: CONFIG.PAGE_SIZE,
+  });
+  const data = payload.data || {};
+  const orders = Array.isArray(data.list) ? data.list : [];
+  if (orders.length < CONFIG.PAGE_SIZE) return { orders, truncated: false };
+  if (depth >= CONFIG.MAX_SPLIT_DEPTH || end - start < 120000) return { orders, truncated: true };
+  const mid = new Date(Math.floor((start.getTime() + end.getTime()) / 2000) * 1000);
+  const [a, b] = await Promise.all([
+    fetchUpstreamWindow(start, mid, depth + 1),
+    fetchUpstreamWindow(new Date(mid.getTime() + 1000), end, depth + 1),
+  ]);
+  return { orders: a.orders.concat(b.orders), truncated: a.truncated || b.truncated };
+}
+
+// A day is loaded twice: through the production partner API (filtered, 20%) and
+// through the upstream CPS API (everything). Orders the partner API dropped are
+// the excluded ones, credited at 70%.
+async function loadDay(key) {
+  const start = parseDateInput(key);
+  const end = new Date(start); end.setHours(23, 59, 59, 0);
+  const [filtered, all] = await Promise.all([
+    fetchFilteredWindow(start, end, 0),
+    fetchUpstreamWindow(start, end, 0).catch(err => {
+      if (!(err instanceof UpstreamError)) throw err;
+      return { orders: null, truncated: false, error: err.message };
+    }),
+  ]);
+
+  const byId = new Map();
+  if (all.orders) {
+    const includedIds = new Set(filtered.orders.map(o => String(o.orderId)));
+    for (const o of all.orders) {
+      byId.set(String(o.orderId), { ...o, _excluded: !includedIds.has(String(o.orderId)) });
+    }
+  }
+  // Anything the partner API returned is included by definition, even if the
+  // upstream call failed or did not list it.
+  for (const o of filtered.orders) {
+    if (!byId.has(String(o.orderId))) byId.set(String(o.orderId), { ...o, _excluded: false });
+  }
+  return {
+    orders: [...byId.values()],
+    truncated: filtered.truncated || all.truncated,
+    upstreamError: all.error || null,
+  };
+}
+
+async function loadAdSummary(start, end) {
+  const cacheKey = dateKey(start) + '|' + dateKey(end);
+  if (adCache.has(cacheKey)) return adCache.get(cacheKey);
+  const endOfDay = new Date(end); endOfDay.setHours(23, 59, 59, 0);
+  const payload = await upstreamPost('/open/order/adSummary', {
+    startDate: apiStamp(start), endDate: apiStamp(endOfDay),
+    page: 1, pageSize: CONFIG.PAGE_SIZE,
+  });
+  const list = Array.isArray((payload.data || {}).list) ? payload.data.list : [];
+  const map = new Map();
+  for (const row of list) {
+    const day = String(row.date || '').slice(0, 10);
+    const value = parseFloat(row.ad_revenue_dollars);
+    if (!day || !Number.isFinite(value)) continue;
+    map.set(day, (map.get(day) || 0) + value * 100);
+  }
+  adCache.set(cacheKey, map);
+  return map;
+}
+
+async function pool(items, size, fn) {
+  let i = 0;
+  const workers = Array.from({ length: Math.min(size, items.length) }, async () => {
+    while (i < items.length) { const idx = i++; await fn(items[idx], idx); }
+  });
+  await Promise.all(workers);
+}
+
+async function loadRange() {
+  state.loading = true;
+  state.error = null;
+  state.adError = null;
+  state.upstreamError = null;
+  setStatus(t('loading'), null);
+  $('dashboard').classList.add('loadingdim');
+  try {
+    const days = listDays(state.start, state.end);
+    const missing = days.filter(d => !dayCache.has(d));
+    let done = 0;
+    const adPromise = loadAdSummary(state.start, state.end).catch(err => {
+      state.adError = err.message || String(err);
+      return new Map();
+    });
+    await pool(missing, CONFIG.FETCH_CONCURRENCY, async key => {
+      dayCache.set(key, await loadDay(key));
+      done += 1;
+      setStatus(t('loadingDays', { a: done, b: missing.length }), null);
+    });
+    state.adDaily = await adPromise;
+    const byId = new Map();
+    let truncated = false;
+    for (const key of days) {
+      const entry = dayCache.get(key);
+      if (!entry) continue;
+      truncated = truncated || entry.truncated;
+      if (entry.upstreamError) state.upstreamError = entry.upstreamError;
+      for (const order of entry.orders) byId.set(String(order.orderId ?? byId.size), order);
+    }
+    state.orders = [...byId.values()];
+    state.truncated = truncated;
+    setStatus(t('updated', { t: new Date().toLocaleTimeString(I18N[LANG]._locale), n: intFmt.format(state.orders.length) }), true);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      state.error = null;
+      setStatus(t('signedOut'), null);
+      state.loading = false;
+      $('dashboard').classList.remove('loadingdim');
+      renderAll();
+      showLogin(err.message || null);
+      return;
+    }
+    state.error = err;
+    let msg = err.message || String(err);
+    if (err instanceof TypeError) msg = t('corsError');
+    state.errorMessage = msg;
+    setStatus(t('connFailed'), false);
+  }
+  state.loading = false;
+  $('dashboard').classList.remove('loadingdim');
+  renderAll();
+}
+
+function setStatus(text, ok) {
+  $('statusText').textContent = text;
+  const dot = $('connDot');
+  dot.className = 'dot' + (ok === true ? ' ok' : ok === false ? ' err' : '');
+}
+
+/* ================= derived data ================= */
+
+function datasetFilter(list) {
+  if (state.dataset === 'included') return list.filter(o => !isExcluded(o));
+  if (state.dataset === 'excluded') return list.filter(isExcluded);
+  return list;
+}
+
+function derive() {
+  const startKey = dateKey(state.start), endKey = dateKey(state.end);
+  const inRangeAll = state.orders.filter(o => {
+    const day = String(o.createTime || '').slice(0, 10);
+    return day >= startKey && day <= endKey;
+  });
+  const inRange = datasetFilter(inRangeAll);
+  const completed = inRange.filter(o => !isReturned(o));
+
+  const unknown = new Set();
+  let grossMinor = 0, earnMinor = 0;
+  const daily = new Map();          // dayKey -> {gross, earn, count, byCur, byClass}
+  const countries = new Map();      // name -> {usd, earn, count, byCurrency}
+  const currencyTotals = new Map(); // cur -> {gross, earn}
+  const blankClass = () => ({ included: { gross: 0, earn: 0, count: 0 }, excluded: { gross: 0, earn: 0, count: 0 } });
+
+  for (const o of completed) {
+    const usd = usdMinor(o);
+    if (usd == null) { unknown.add(String(o.currencyType || '?')); continue; }
+    const share = shareOf(o);
+    const earn = usd * share;
+    const cls = isExcluded(o) ? 'excluded' : 'included';
+    grossMinor += usd; earnMinor += earn;
+
+    const cur = String(o.currencyType || '?');
+    const cEntry = currencyTotals.get(cur) || { gross: 0, earn: 0 };
+    cEntry.gross += usd; cEntry.earn += earn;
+    currencyTotals.set(cur, cEntry);
+
+    const day = String(o.createTime || '').slice(0, 10);
+    const dEntry = daily.get(day) || { gross: 0, earn: 0, count: 0, byCur: new Map(), byClass: blankClass() };
+    dEntry.gross += usd; dEntry.earn += earn; dEntry.count += 1;
+    const dCur = dEntry.byCur.get(cur) || { gross: 0, earn: 0 };
+    dCur.gross += usd; dCur.earn += earn;
+    dEntry.byCur.set(cur, dCur);
+    dEntry.byClass[cls].gross += usd; dEntry.byClass[cls].earn += earn; dEntry.byClass[cls].count += 1;
+    daily.set(day, dEntry);
+
+    const name = countryOf(o.language);
+    const nEntry = countries.get(name) || { usd: 0, earn: 0, count: 0, byCurrency: new Map() };
+    nEntry.usd += usd; nEntry.earn += earn; nEntry.count += 1;
+    nEntry.byCurrency.set(cur, (nEntry.byCurrency.get(cur) || 0) + amountMinor(o));
+    countries.set(name, nEntry);
+  }
+  state.unknownCurrencies = unknown;
+
+  // Same per-day shape as `daily`, but converted with the legacy static-FX table
+  // (usdMinorLegacy) instead of the upstream-reported USD amount. Feeds the
+  // "Earnings per day · estimated" card so it can be compared with the reported
+  // one. Built in its own pass so an order missing an upstream USD amount still
+  // contributes here (and vice versa).
+  const dailyLegacy = new Map();
+  for (const o of completed) {
+    const usd = usdMinorLegacy(o);
+    if (usd == null) continue;
+    const share = shareOf(o);
+    const earn = usd * share;
+    const cls = isExcluded(o) ? 'excluded' : 'included';
+    const cur = String(o.currencyType || '?');
+    const day = String(o.createTime || '').slice(0, 10);
+    const e = dailyLegacy.get(day) || { gross: 0, earn: 0, count: 0, byCur: new Map(), byClass: blankClass() };
+    e.gross += usd; e.earn += earn; e.count += 1;
+    const c = e.byCur.get(cur) || { gross: 0, earn: 0 };
+    c.gross += usd; c.earn += earn;
+    e.byCur.set(cur, c);
+    e.byClass[cls].gross += usd; e.byClass[cls].earn += earn; e.byClass[cls].count += 1;
+    dailyLegacy.set(day, e);
+  }
+
+  // Class totals stay independent of the selected dataset so the KPI row always
+  // shows filtered, missing, ad and total revenue side by side.
+  const totals = blankClass();
+  for (const o of inRangeAll) {
+    if (isReturned(o)) continue;
+    const usd = usdMinor(o);
+    if (usd == null) continue;
+    const cls = isExcluded(o) ? 'excluded' : 'included';
+    totals[cls].gross += usd;
+    totals[cls].earn += usd * SHARE[cls];
+    totals[cls].count += 1;
+  }
+
+  const days = listDays(state.start, state.end);
+  let adMinor = 0, adDays = 0;
+  for (const key of days) {
+    const v = state.adDaily.get(key);
+    if (v === undefined) continue;
+    adMinor += v; adDays += 1;
+  }
+
+  return {
+    inRangeAll, inRange, completed, grossMinor, earnMinor,
+    daily, dailyLegacy, countries, currencyTotals, days, totals, adMinor, adDays,
+  };
+}
+
+// Fixed currency -> categorical color slots for the loaded timeframe.
+// Top currencies (by gross est. USD) take slots 1..n; the tail folds into a gray "Other".
+const MAX_CURRENCY_SERIES = 7;
+function currencySeries(d) {
+  const ranked = [...d.currencyTotals.entries()].sort((a, b) => b[1].gross - a[1].gross).map(([c]) => c);
+  let main = ranked, foldedList = [];
+  if (ranked.length > MAX_CURRENCY_SERIES) {
+    main = ranked.slice(0, MAX_CURRENCY_SERIES - 1);
+    foldedList = ranked.slice(MAX_CURRENCY_SERIES - 1);
+  }
+  const series = main.map((cur, i) => ({ key: cur, label: cur, color: `var(--cat${i + 1})` }));
+  const folded = new Set(foldedList);
+  if (foldedList.length) series.push({ key: '__other', label: t('other', { n: foldedList.length }), color: 'var(--muted)' });
+  const colorOf = cur => {
+    const i = main.indexOf(cur);
+    return i >= 0 ? `var(--cat${i + 1})` : 'var(--muted)';
+  };
+  return { series, folded, colorOf };
+}
+
+// In the combined view the daily columns stack by order class instead of currency,
+// so the 20% and 70% contributions stay visually separable.
+function classSeries() {
+  return {
+    byClass: true,
+    series: [
+      { key: 'included', label: t('clIncluded') + ' · ' + pct(SHARE.included), color: 'var(--inc)' },
+      { key: 'excluded', label: t('clExcluded') + ' · ' + pct(SHARE.excluded), color: 'var(--exc)' },
+    ],
+  };
+}
+
+/* ================= tooltip ================= */
+
+const tip = $('tip');
+function showTip(node, x, y) {
+  tip.replaceChildren(node);
+  tip.style.display = 'block';
+  const r = tip.getBoundingClientRect();
+  tip.style.left = Math.max(8, Math.min(x + 14, innerWidth - r.width - 8)) + 'px';
+  tip.style.top = Math.max(8, Math.min(y + 14, innerHeight - r.height - 8)) + 'px';
+}
+function hideTip() { tip.style.display = 'none'; }
+
+/* ================= rendering ================= */
+
+function renderAll() {
+  const d = derive();
+  const cs = currencySeries(d);
+  const stack = state.dataset === 'all' ? classSeries() : cs;
+  renderBanners();
+  renderKpis(d);
+  // Shared y-axis across both "Earnings per day" cards so the estimated and
+  // reported bars can be compared at a glance.
+  const dailyMax = Math.max(0,
+    ...[...d.daily.values()].map(e => e.earn / 100),
+    ...[...d.dailyLegacy.values()].map(e => e.earn / 100));
+  renderDailyCard(d, stack, cs, {
+    titleEl: $('dailyTitle'), subEl: $('dailySub'),
+    title: t('dailyTitle') + ' · ' + t('dailyEst'),
+    dailyMap: d.dailyLegacy, chartId: 'dailyChart', tableId: 'dailyTable', yMaxHint: dailyMax,
+  });
+  renderDailyCard(d, stack, cs, {
+    titleEl: $('dailyUsdTitle'), subEl: $('dailyUsdSub'),
+    title: t('dailyTitle') + ' · ' + t('dailyUsd'),
+    dailyMap: d.daily, chartId: 'dailyUsdChart', tableId: 'dailyUsdTable', yMaxHint: dailyMax,
+  });
+  renderAdChart(d);
+  renderConvCompare(d);
+  renderCountries(d);
+  renderOrders(d);
+}
+
+function warnBanner(title, body) {
+  return h('div', { class: 'banner warn' },
+    h('span', { class: 'ic' }, '⚠'),
+    h('span', null, h('span', { class: 't' }, title), body));
+}
+
+function renderBanners() {
+  const box = $('banners');
+  box.replaceChildren();
+  if (state.error) {
+    box.append(h('div', { class: 'banner error', role: 'alert' },
+      h('span', { class: 'ic' }, '⚠'),
+      h('span', null, h('span', { class: 't' }, t('errTitle')), state.errorMessage || ''),
+      h('button', { onclick: () => loadRange() }, t('retry'))));
+  }
+  if (state.upstreamError) {
+    box.append(warnBanner(t('upstreamFailTitle'), state.upstreamError + t('upstreamFailBody')));
+  }
+  if (state.adError) {
+    box.append(warnBanner(t('adFailTitle'), state.adError));
+  }
+  if (state.truncated) {
+    box.append(warnBanner(t('partialTitle'), t('partialBody')));
+  }
+  if (state.unknownCurrencies.size) {
+    box.append(warnBanner(t('noRateTitle'), [...state.unknownCurrencies].sort().join(', ') + t('noRateBody')));
+  }
+}
+
+function renderKpis(d) {
+  const orderEarn = d.totals.included.earn + d.totals.excluded.earn;
+  const returned = d.inRange.length - d.completed.length;
+
+  $('kpiTotalLabel').textContent = t('kpiTotal');
+  $('kpiTotal').textContent = dollars(orderEarn + d.adMinor);
+  $('kpiTotalAux').textContent = t('kpiTotalAux', {
+    o: dollars(orderEarn), a: dollars(d.adMinor),
+    from: dayLabelFmt.format(state.start), to: dayLabelFmt.format(state.end),
+  });
+
+  $('kpiOrderRevLabel').textContent = t('kpiOrderRev', { p: pct(SHARE.included) });
+  $('kpiOrderRev').textContent = dollars(d.totals.included.earn);
+  $('kpiOrderRevAux').textContent = t('kpiOrderRevAux', {
+    p: pct(SHARE.included), g: dollars(d.totals.included.gross), n: intFmt.format(d.totals.included.count),
+  });
+
+  $('kpiExcludedRevLabel').textContent = t('kpiExcludedRev', { p: pct(SHARE.excluded) });
+  $('kpiExcludedRev').textContent = dollars(d.totals.excluded.earn);
+  $('kpiExcludedRevAux').textContent = t('kpiExcludedRevAux', {
+    p: pct(SHARE.excluded), g: dollars(d.totals.excluded.gross), n: intFmt.format(d.totals.excluded.count),
+  });
+
+  $('kpiAdRevLabel').textContent = t('kpiAdRev');
+  $('kpiAdRev').textContent = dollars(d.adMinor);
+  $('kpiAdRevAux').textContent = t('kpiAdRevAux', { n: intFmt.format(d.adDays) });
+
+  $('kpiGrossLabel').textContent = t('kpiGross');
+  $('kpiGross').textContent = dollars(d.grossMinor);
+  $('kpiGrossAux').textContent = t('kpiGrossAux');
+
+  $('kpiOrdersLabel').textContent = t('kpiOrders');
+  $('kpiOrders').textContent = intFmt.format(d.completed.length);
+  $('kpiOrdersAux').textContent = returned ? t('plusReturned', { n: intFmt.format(returned) }) : t('noReturns');
+
+  $('kpiCountriesLabel').textContent = t('kpiCountries');
+  $('kpiCountries').textContent = intFmt.format(d.countries.size);
+  const top = [...d.countries.entries()].sort((a, b) => b[1].usd - a[1].usd)[0];
+  $('kpiCountriesAux').textContent = top ? t('topCountry', { n: top[0] }) : '';
+}
+
+/* ---------- daily earnings (columns) ---------- */
+
+// Renders one "Earnings per day" card. `cfg.dailyMap` selects the conversion
+// basis (d.dailyLegacy = static-FX estimate, d.daily = upstream-reported USD);
+// both cards share the single chart/table toggle (state.dailyView).
+function renderDailyCard(d, stack, cs, cfg) {
+  cfg.titleEl.textContent = cfg.title;
+  cfg.subEl.textContent = stack.byClass ? t('dailySubType') : t('dailySubCur');
+  renderDailyTable(d, cfg);
+  const box = $(cfg.chartId);
+  box.replaceChildren();
+  if (state.dailyView !== 'chart') { box.hidden = true; return; }
+  box.hidden = false;
+
+  const rows = d.days.map(key => {
+    const e = cfg.dailyMap.get(key) || { gross: 0, earn: 0, count: 0, byCur: new Map(), byClass: null };
+    const segs = stack.series.map(sr => {
+      let earn = 0;
+      if (stack.byClass) earn = e.byClass ? e.byClass[sr.key].earn : 0;
+      else if (sr.key === '__other') { for (const [c, v] of e.byCur) { if (cs.folded.has(c)) earn += v.earn; } }
+      else earn = (e.byCur.get(sr.key) || { earn: 0 }).earn;
+      return { label: sr.label, color: sr.color, earn: earn / 100 };
+    });
+    return { key, earn: e.earn / 100, gross: e.gross / 100, count: e.count, segs };
+  });
+  const total = rows.reduce((a, r) => a + r.earn, 0);
+  const hasData = [...cfg.dailyMap.values()].some(e => e.count > 0);
+  if (!hasData) { box.append(h('div', { class: 'empty' }, t('empty'))); return; }
+
+  const W = Math.max(320, box.clientWidth || 800);
+  const M = { top: 14, right: 12, bottom: 30, left: 56 };
+  const plotH = 240, H = M.top + plotH + M.bottom;
+  const plotW = W - M.left - M.right;
+  const maxVal = cfg.yMaxHint != null ? cfg.yMaxHint : Math.max(...rows.map(r => r.earn), 0);
+  const yMax = niceCeil(maxVal || 1);
+  const yScale = v => M.top + plotH - (v / yMax) * plotH;
+  const band = plotW / rows.length;
+  const barW = Math.max(3, Math.min(24, band * 0.62));
+
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': `${t('dailyTitle')} ${usdFmt.format(total)}` });
+
+  const TICKS = 4;
+  for (let i = 0; i <= TICKS; i++) {
+    const v = yMax * i / TICKS, y = yScale(v);
+    if (i > 0) svg.append(s('line', { x1: M.left, x2: W - M.right, y1: y, y2: y, stroke: 'var(--grid)', 'stroke-width': 1 }));
+    svg.append(s('text', { x: M.left - 8, y: y + 4, 'text-anchor': 'end', class: 'axis-label' }, axisMoney(v)));
+  }
+  svg.append(s('line', { x1: M.left, x2: W - M.right, y1: yScale(0), y2: yScale(0), stroke: 'var(--baseline)', 'stroke-width': 1 }));
+
+  const labelEvery = Math.ceil(rows.length / 8);
+  const crosshair = s('line', { y1: M.top, y2: M.top + plotH, stroke: 'var(--baseline)', 'stroke-width': 1, visibility: 'hidden' });
+  svg.append(crosshair);
+
+  rows.forEach((r, i) => {
+    const cx = M.left + band * i + band / 2;
+    const x = cx - barW / 2;
+    if (i % labelEvery === 0) {
+      svg.append(s('text', { x: cx, y: H - 10, 'text-anchor': 'middle', class: 'axis-label' },
+        dayLabelFmt.format(parseDateInput(r.key))));
+    }
+    const hit = s('rect', {
+      x: M.left + band * i, y: M.top, width: band, height: plotH,
+      class: 'bar-hit', tabindex: 0, role: 'img',
+      'aria-label': `${r.key}: ${usdFmt.format(r.earn)}, ${r.count}`,
+    });
+    // stacked segments, bottom-up in fixed series order; 2px surface gap between
+    // touching segments; only the topmost segment gets the 4px rounded data-end
+    const column = s('g', {});
+    const visible = r.segs.filter(sg => sg.earn > 0);
+    let cum = 0;
+    visible.forEach((sg, k) => {
+      const yTop = yScale(cum + sg.earn), yBot = yScale(cum);
+      const isTop = k === visible.length - 1;
+      if (isTop) {
+        column.append(s('path', { d: columnPath(x, yTop, barW, Math.max(yBot - yTop, 1.5)), fill: sg.color }));
+      } else {
+        const gap = yBot - yTop > 3.5 ? 2 : 0;
+        column.append(s('rect', { x, y: yTop + gap, width: barW, height: Math.max(yBot - yTop - gap, 0.8), fill: sg.color }));
+      }
+      cum += sg.earn;
+    });
+    const tipNode = () => h('div', null,
+      h('div', { class: 'head' }, parseDateInput(r.key).toLocaleDateString(I18N[LANG]._locale)),
+      h('div', { class: 'row' }, h('span', null, t('earningsLbl')), h('span', { class: 'v' }, usdFmt.format(r.earn))),
+      [...r.segs].filter(sg => sg.earn > 0).sort((a, b) => b.earn - a.earn).map(sg =>
+        h('div', { class: 'row' },
+          h('span', null, h('span', { class: 'key', style: 'border-top-color:' + sg.color }), sg.label),
+          h('span', { class: 'v' }, usdFmt.format(sg.earn)))),
+      h('div', { class: 'row' }, h('span', null, t('ordersLbl')), h('span', { class: 'v' }, intFmt.format(r.count))));
+    hit.addEventListener('pointermove', ev => {
+      crosshair.setAttribute('x1', cx); crosshair.setAttribute('x2', cx);
+      crosshair.setAttribute('visibility', 'visible');
+      showTip(tipNode(), ev.clientX, ev.clientY);
+    });
+    hit.addEventListener('pointerleave', () => { crosshair.setAttribute('visibility', 'hidden'); hideTip(); });
+    hit.addEventListener('focus', () => {
+      const b = hit.getBoundingClientRect();
+      showTip(tipNode(), b.left + b.width / 2, b.top + 40);
+    });
+    hit.addEventListener('blur', hideTip);
+    svg.append(hit, column);
+  });
+
+  box.append(svg);
+  if (stack.series.length > 1) {
+    box.append(h('div', { class: 'legend' }, stack.series.map(sr =>
+      h('span', { class: 'li' }, h('span', { class: 'sw', style: 'background:' + sr.color }), sr.label))));
+  }
+}
+
+function renderDailyTable(d, cfg) {
+  const box = $(cfg.tableId);
+  box.hidden = state.dailyView !== 'table';
+  box.replaceChildren();
+  if (box.hidden) return;
+  const rows = d.days.map(key => ({
+    key,
+    e: cfg.dailyMap.get(key) || { gross: 0, earn: 0, count: 0, byCur: new Map() },
+  }));
+  box.append(h('table', null,
+    h('thead', null, h('tr', null,
+      h('th', null, t('hDate')), h('th', { class: 'num' }, t('hOrders')),
+      h('th', { class: 'num' }, t('hGross')), h('th', { class: 'num' }, t('hEarnings')),
+      h('th', { class: 'num' }, t('hAdRevenue')),
+      h('th', null, t('hByCurrency')))),
+    h('tbody', null, rows.map(({ key, e }) => h('tr', null,
+      h('td', null, key),
+      h('td', { class: 'num' }, intFmt.format(e.count)),
+      h('td', { class: 'num' }, dollars(e.gross)),
+      h('td', { class: 'num' }, dollars(e.earn)),
+      h('td', { class: 'num' }, dollars(state.adDaily.get(key) || 0)),
+      h('td', { class: 'muted' }, [...e.byCur.entries()].sort((a, b) => b[1].earn - a[1].earn)
+        .map(([cur, v]) => `${cur} ${usdFmt.format(v.earn / 100)}`).join(' · ') || '—'))))));
+}
+
+/* ---------- ad revenue (columns) ---------- */
+
+function renderAdChart(d) {
+  $('adTitle').textContent = t('adTitle');
+  $('adSub').textContent = t('adSub');
+  const box = $('adChart');
+  box.replaceChildren();
+
+  const rows = d.days.map(key => ({ key, value: (state.adDaily.get(key) || 0) / 100 }));
+  if (!rows.some(r => r.value > 0)) { box.append(h('div', { class: 'empty' }, t('empty'))); return; }
+
+  const W = Math.max(320, box.clientWidth || 800);
+  const M = { top: 14, right: 12, bottom: 30, left: 56 };
+  const plotH = 180, H = M.top + plotH + M.bottom;
+  const plotW = W - M.left - M.right;
+  const yMax = niceCeil(Math.max(...rows.map(r => r.value)) || 1);
+  const yScale = v => M.top + plotH - (v / yMax) * plotH;
+  const band = plotW / rows.length;
+  const barW = Math.max(3, Math.min(24, band * 0.62));
+
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': t('adTitle') });
+  const TICKS = 4;
+  for (let i = 0; i <= TICKS; i++) {
+    const v = yMax * i / TICKS, y = yScale(v);
+    if (i > 0) svg.append(s('line', { x1: M.left, x2: W - M.right, y1: y, y2: y, stroke: 'var(--grid)', 'stroke-width': 1 }));
+    svg.append(s('text', { x: M.left - 8, y: y + 4, 'text-anchor': 'end', class: 'axis-label' }, axisMoney(v)));
+  }
+  svg.append(s('line', { x1: M.left, x2: W - M.right, y1: yScale(0), y2: yScale(0), stroke: 'var(--baseline)', 'stroke-width': 1 }));
+
+  const labelEvery = Math.ceil(rows.length / 8);
+  rows.forEach((r, i) => {
+    const cx = M.left + band * i + band / 2;
+    const x = cx - barW / 2;
+    if (i % labelEvery === 0) {
+      svg.append(s('text', { x: cx, y: H - 10, 'text-anchor': 'middle', class: 'axis-label' },
+        dayLabelFmt.format(parseDateInput(r.key))));
+    }
+    const hit = s('rect', {
+      x: M.left + band * i, y: M.top, width: band, height: plotH,
+      class: 'bar-hit', tabindex: 0, role: 'img',
+      'aria-label': `${r.key}: ${usdFmt.format(r.value)}`,
+    });
+    const top = yScale(r.value), bottom = yScale(0);
+    const column = s('g', {}, s('path', { d: columnPath(x, top, barW, Math.max(bottom - top, 1.5)), fill: 'var(--ad)' }));
+    const tipNode = () => h('div', null,
+      h('div', { class: 'head' }, parseDateInput(r.key).toLocaleDateString(I18N[LANG]._locale)),
+      h('div', { class: 'row' },
+        h('span', null, h('span', { class: 'key', style: 'border-top-color:var(--ad)' }), t('adRevenueLbl')),
+        h('span', { class: 'v' }, usdFmt.format(r.value))));
+    hit.addEventListener('pointermove', ev => showTip(tipNode(), ev.clientX, ev.clientY));
+    hit.addEventListener('pointerleave', hideTip);
+    hit.addEventListener('focus', () => { const b = hit.getBoundingClientRect(); showTip(tipNode(), b.left + b.width / 2, b.top + 40); });
+    hit.addEventListener('blur', hideTip);
+    svg.append(hit, column);
+  });
+  box.append(svg);
+}
+
+/* ---------- revenue by currency: old (static FX) vs new (upstream USD) ---------- */
+
+function convCompareData(orders) {
+  const rows = new Map(); // cur -> { orders, native, legacy, server, hasRate }
+  let noServerCount = 0;
+  for (const o of orders) {
+    const cur = String(o.currencyType || 'USD').toUpperCase();
+    const e = rows.get(cur) || {
+      orders: 0, native: 0, legacy: 0, server: 0,
+      hasRate: LEGACY_USD_RATES[cur] !== undefined,
+    };
+    e.orders += 1;
+    const native = parseFloat(o.amount);
+    if (Number.isFinite(native)) e.native += native;
+    const leg = usdMinorLegacy(o);
+    if (leg != null) e.legacy += leg;
+    const srv = usdMinor(o);
+    if (srv != null) e.server += srv; else noServerCount += 1;
+    rows.set(cur, e);
+  }
+  const list = [...rows.entries()]
+    .map(([cur, v]) => ({ cur, ...v, delta: v.server - v.legacy }))
+    .sort((a, b) => Math.max(b.server, b.legacy) - Math.max(a.server, a.legacy));
+  const legacyTotal = list.reduce((sum, r) => sum + r.legacy, 0);
+  const serverTotal = list.reduce((sum, r) => sum + r.server, 0);
+  return {
+    list, legacyTotal, serverTotal,
+    noRate: list.filter(r => !r.hasRate).map(r => r.cur),
+    noServerCount,
+  };
+}
+
+// Stable currency -> color across both donuts and the table.
+function convColors(list) {
+  const ranked = [...list].sort((a, b) => Math.max(b.server, b.legacy) - Math.max(a.server, a.legacy));
+  const map = new Map();
+  ranked.forEach((r, i) => map.set(r.cur, i < 7 ? `var(--cat${i + 1})` : 'var(--muted)'));
+  return cur => map.get(cur) || 'var(--muted)';
+}
+
+function convDonut(container, ariaLabel, slices, total) {
+  container.replaceChildren();
+  const withVal = slices.filter(sl => sl.value > 0);
+  if (!withVal.length || total <= 0) { container.append(h('div', { class: 'empty' }, '—')); return; }
+  const SIZE = 200, cx = 100, cy = 100, R = 90, RI = 55;
+  const svg = s('svg', { viewBox: `0 0 ${SIZE} ${SIZE}`, width: SIZE, height: SIZE, role: 'img', 'aria-label': ariaLabel });
+  let angle = -Math.PI / 2;
+  for (const sl of withVal) {
+    const frac = sl.value / total;
+    const a1 = angle + Math.min(frac * 2 * Math.PI, 2 * Math.PI - 1e-4);
+    const tipNode = () => h('div', null,
+      h('div', { class: 'head' }, ariaLabel + ' · ' + sl.label),
+      h('div', { class: 'row' },
+        h('span', null, h('span', { class: 'key', style: 'border-top-color:' + sl.color }), 'USD'),
+        h('span', { class: 'v' }, usdFmt.format(sl.value / 100))),
+      h('div', { class: 'row' }, h('span', null, t('shareLbl')), h('span', { class: 'v' }, (frac * 100).toFixed(1) + '%')));
+    const p = s('path', {
+      d: donutArc(cx, cy, R, RI, angle, a1), fill: sl.color, class: 'slice', tabindex: 0, role: 'img',
+      stroke: 'var(--surface)', 'stroke-width': 2, 'stroke-linejoin': 'round',
+      'aria-label': `${sl.label}: ${usdFmt.format(sl.value / 100)}, ${(frac * 100).toFixed(1)} percent`,
+    });
+    p.addEventListener('pointermove', ev => showTip(tipNode(), ev.clientX, ev.clientY));
+    p.addEventListener('pointerleave', hideTip);
+    p.addEventListener('focus', () => { const b = p.getBoundingClientRect(); showTip(tipNode(), b.left + b.width / 2, b.top + b.height / 2); });
+    p.addEventListener('blur', hideTip);
+    svg.append(p);
+    angle = a1;
+  }
+  svg.append(s('text', { x: cx, y: cy + 4, 'text-anchor': 'middle', fill: 'var(--ink)', 'font-size': 17, 'font-weight': 700 }, usdWhole.format(total / 100)));
+  container.append(svg);
+}
+
+function renderConvCompare(d) {
+  const legendBox = $('convLegend'), table = $('convTable'), note = $('convNote');
+  legendBox.replaceChildren(); table.replaceChildren(); note.replaceChildren();
+
+  const cc = convCompareData(d.completed);
+  if (!cc.list.length || (cc.legacyTotal <= 0 && cc.serverTotal <= 0)) {
+    $('convLegacyPie').replaceChildren(h('div', { class: 'empty' }, t('convEmpty')));
+    $('convServerPie').replaceChildren();
+    return;
+  }
+  const colorOf = convColors(cc.list);
+
+  // Donuts + legend fold the long tail of currencies into one "Other" slice;
+  // the table below keeps every currency.
+  const MAX_SLICES = 7;
+  const ranked = [...cc.list].sort((a, b) => Math.max(b.server, b.legacy) - Math.max(a.server, a.legacy));
+  const mainCur = ranked.slice(0, MAX_SLICES);
+  const tailCur = ranked.slice(MAX_SLICES);
+  const slicesFor = pick => {
+    const arr = mainCur.map(r => ({ label: r.cur, color: colorOf(r.cur), value: pick(r) }));
+    if (tailCur.length) {
+      arr.push({ label: t('other', { n: tailCur.length }), color: 'var(--muted)', value: tailCur.reduce((sum, r) => sum + pick(r), 0) });
+    }
+    return arr;
+  };
+  convDonut($('convLegacyPie'), t('convLegacyCap'), slicesFor(r => r.legacy), cc.legacyTotal);
+  convDonut($('convServerPie'), t('convServerCap'), slicesFor(r => r.server), cc.serverTotal);
+
+  for (const r of mainCur) {
+    legendBox.append(h('span', { class: 'li' },
+      h('span', { class: 'sw', style: 'background:' + colorOf(r.cur) }), r.cur));
+  }
+  if (tailCur.length) {
+    legendBox.append(h('span', { class: 'li' },
+      h('span', { class: 'sw', style: 'background:var(--muted)' }), t('other', { n: tailCur.length })));
+  }
+
+  const deltaCell = (delta, base) => {
+    const cls = delta > 0 ? 'delta-pos' : delta < 0 ? 'delta-neg' : '';
+    const sign = delta > 0 ? '+' : '';
+    const pctStr = base ? ` (${sign}${(delta / base * 100).toFixed(1)}%)` : '';
+    return h('td', { class: 'num ' + cls }, sign + usdFmt.format(delta / 100) + pctStr);
+  };
+
+  const rows = cc.list.map(r => {
+    const base = r.server || r.legacy;
+    const flag = Math.abs(r.delta) >= 100 && base > 0 && Math.abs(r.delta / base) >= 0.01;
+    return h('tr', { class: flag ? 'delta-flag' : null },
+      h('td', null, h('span', { class: 'sw', style: 'background:' + colorOf(r.cur) })),
+      h('td', null, r.cur),
+      h('td', { class: 'num' }, r.hasRate ? LEGACY_USD_RATES[r.cur] : t('convNoRate')),
+      h('td', { class: 'num' }, intFmt.format(r.orders)),
+      h('td', { class: 'num' }, nativeFmt.format(r.native / 100) + ' ' + r.cur),
+      h('td', { class: 'num' }, r.hasRate ? dollars(r.legacy) : '–'),
+      h('td', { class: 'num' }, dollars(r.server)),
+      deltaCell(r.delta, base));
+  });
+  const totalDelta = cc.serverTotal - cc.legacyTotal;
+  rows.push(h('tr', { class: 'delta-flag' },
+    h('td', null, ''), h('td', null, h('strong', null, t('convTotalRow') || 'TOTAL')),
+    h('td', { class: 'num' }, ''), h('td', { class: 'num' }, ''), h('td', { class: 'num' }, ''),
+    h('td', { class: 'num' }, h('strong', null, dollars(cc.legacyTotal))),
+    h('td', { class: 'num' }, h('strong', null, dollars(cc.serverTotal))),
+    deltaCell(totalDelta, cc.serverTotal || cc.legacyTotal)));
+
+  table.append(h('table', null,
+    h('thead', null, h('tr', null,
+      h('th', { 'aria-label': t('hColor') }), h('th', null, t('hCurrency')),
+      h('th', { class: 'num' }, t('convRate')), h('th', { class: 'num' }, t('hOrders')),
+      h('th', { class: 'num' }, t('convHNative')), h('th', { class: 'num' }, t('convHLegacy')),
+      h('th', { class: 'num' }, t('convHServer')), h('th', { class: 'num' }, t('convHDelta')))),
+    h('tbody', null, rows)));
+
+  const base = cc.serverTotal || cc.legacyTotal;
+  const within = base > 0 && Math.abs(totalDelta / base) < 0.005;
+  note.append(h('div', null, within
+    ? t('convMatch', { d: usdFmt.format(totalDelta / 100) })
+    : t('convDiff', {
+        d: (totalDelta > 0 ? '+' : '') + usdFmt.format(totalDelta / 100),
+        p: (totalDelta > 0 ? '+' : '') + (base ? (totalDelta / base * 100).toFixed(1) : '0') + '%',
+      })));
+  if (cc.noRate.length) {
+    note.append(h('div', null, t('convNoRateNote') + cc.noRate.sort().join(', ') + t('convNoRateNoteBody')));
+  }
+  if (cc.noServerCount) {
+    note.append(h('div', null, t('convNoServerNote', { n: cc.noServerCount })));
+  }
+}
+
+/* ---------- country bars ---------- */
+
+function renderCountries(d) {
+  const chart = $('countryChart'), table = $('countryTable');
+  chart.replaceChildren(); table.replaceChildren();
+  const entries = [...d.countries.entries()]
+    .map(([name, v]) => ({ name, ...v }))
+    .sort((a, b) => b.usd - a.usd);
+  if (!entries.length) {
+    chart.append(h('div', { class: 'empty' }, t('empty')));
+    return;
+  }
+
+  const MAXROWS = 10;
+  let rows = entries;
+  if (entries.length > MAXROWS) {
+    const head = entries.slice(0, MAXROWS - 1);
+    const rest = entries.slice(MAXROWS - 1);
+    const other = { name: t('other', { n: rest.length }), usd: 0, count: 0, byCurrency: new Map() };
+    for (const e of rest) {
+      other.usd += e.usd; other.count += e.count;
+      for (const [c, v] of e.byCurrency) other.byCurrency.set(c, (other.byCurrency.get(c) || 0) + v);
+    }
+    rows = [...head, other];
+  }
+
+  const W = Math.max(320, chart.clientWidth || 600);
+  const rowH = 38, labelW = Math.min(150, W * 0.3), valueW = 76;
+  const H = rows.length * rowH + 6;
+  const plotW = W - labelW - valueW - 8;
+  const maxUsd = Math.max(...rows.map(r => r.usd));
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, width: W, height: H, role: 'img', 'aria-label': t('countryTitle') });
+
+  rows.forEach((r, i) => {
+    const y = i * rowH + 6;
+    const barH = 16;
+    const w = maxUsd ? Math.max(2, (r.usd / maxUsd) * plotW) : 2;
+    svg.append(s('text', { x: labelW - 10, y: y + barH / 2 + 4, 'text-anchor': 'end', fill: 'var(--ink)', 'font-size': 12.5 }, r.name));
+    svg.append(s('path', { d: barPathH(labelW, y, w, barH), fill: 'var(--series)' }));
+    svg.append(s('text', {
+      x: labelW + w + 8, y: y + barH / 2 + 4, fill: 'var(--ink2)',
+      'font-size': 11.5, style: 'font-variant-numeric:tabular-nums',
+    }, usdWhole.format(r.usd / 100)));
+    const hit = s('rect', {
+      x: 0, y: i * rowH, width: W, height: rowH, class: 'bar-hit', tabindex: 0, role: 'img',
+      'aria-label': `${r.name}: ${usdFmt.format(r.usd / 100)} from ${r.count} orders`,
+    });
+    const tipNode = () => h('div', null,
+      h('div', { class: 'head' }, `${r.name} · ${intFmt.format(r.count)} ${t('ordersLbl').toLowerCase()}`),
+      h('div', { class: 'row' }, h('span', null, h('span', { class: 'key' }), t('hEstUsd')), h('span', { class: 'v' }, usdFmt.format(r.usd / 100))),
+      [...r.byCurrency.entries()].sort((a, b) => b[1] - a[1]).map(([cur, minor]) =>
+        h('div', { class: 'row' }, h('span', null, cur), h('span', { class: 'v' }, nativeFmt.format(minor / 100)))));
+    hit.addEventListener('pointermove', ev => showTip(tipNode(), ev.clientX, ev.clientY));
+    hit.addEventListener('pointerleave', hideTip);
+    hit.addEventListener('focus', () => { const b = hit.getBoundingClientRect(); showTip(tipNode(), b.left + labelW, b.top + 20); });
+    hit.addEventListener('blur', hideTip);
+    svg.append(hit);
+  });
+  chart.append(svg);
+
+  const totalUsd = entries.reduce((a, r) => a + r.usd, 0);
+  table.append(h('table', null,
+    h('thead', null, h('tr', null,
+      h('th', null, t('hCountry')), h('th', null, t('hCurAmount')),
+      h('th', { class: 'num' }, t('hEstUsd')), h('th', { class: 'num' }, t('hShare')))),
+    h('tbody', null, entries.map(r => h('tr', null,
+      h('td', null, r.name),
+      h('td', null, [...r.byCurrency.entries()].sort((a, b) => b[1] - a[1])
+        .map(([cur, minor]) => `${cur} ${nativeFmt.format(minor / 100)}`).join(' · ')),
+      h('td', { class: 'num' }, dollars(r.usd)),
+      h('td', { class: 'num' }, totalUsd ? (r.usd / totalUsd * 100).toFixed(1) + '%' : '–'))))));
+}
+
+/* ---------- orders table ---------- */
+
+// Shared by the table (for pagination) and the "current view" CSV export, so both
+// stay in sync with the class/currency/status filters and the active sort.
+function tableRows(d) {
+  let rows = d.inRange;
+  if (state.tableClass === 'included') rows = rows.filter(o => !isExcluded(o));
+  else if (state.tableClass === 'excluded') rows = rows.filter(isExcluded);
+  if (state.tableCurrency !== 'all') rows = rows.filter(o => String(o.currencyType) === state.tableCurrency);
+  if (state.tableStatus === 'completed') rows = rows.filter(o => !isReturned(o));
+  else if (state.tableStatus === 'returned') rows = rows.filter(isReturned);
+
+  const { key, dir } = state.tableSort;
+  const mult = dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    let va, vb;
+    if (key === 'date') { va = String(a.createTime || ''); vb = String(b.createTime || ''); }
+    else if (key === 'amount') { va = amountMinor(a); vb = amountMinor(b); }
+    else if (key === 'usd') { va = usdMinor(a) ?? -1; vb = usdMinor(b) ?? -1; }
+    else { va = String(a.currencyType || ''); vb = String(b.currencyType || ''); }
+    return (va < vb ? -1 : va > vb ? 1 : 0) * mult;
+  });
+}
+
+function renderOrders(d) {
+  const currencies = [...new Set(d.inRange.map(o => String(o.currencyType || '?')))].sort();
+  const sel = $('currencyFilter');
+  const current = state.tableCurrency;
+  sel.replaceChildren(h('option', { value: 'all' }, t('fAllCurrencies')),
+    ...currencies.map(c => h('option', { value: c }, c)));
+  sel.value = currencies.includes(current) ? current : 'all';
+  state.tableCurrency = sel.value;
+
+  const rows = tableRows(d);
+  $('ordersSub').textContent = t('ordersSub', { n: intFmt.format(rows.length), m: intFmt.format(d.inRange.length) });
+
+  const pageSize = CONFIG.TABLE_PAGE_SIZE;
+  const pages = Math.max(1, Math.ceil(rows.length / pageSize));
+  state.tablePage = Math.min(state.tablePage, pages - 1);
+  const pageRows = rows.slice(state.tablePage * pageSize, (state.tablePage + 1) * pageSize);
+
+  const { key, dir } = state.tableSort;
+  const sortTh = (label, k, numeric) => {
+    const active = key === k;
+    return h('th', {
+      class: 'sortable' + (numeric ? ' num' : ''),
+      'aria-sort': active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none',
+      onclick: () => {
+        if (state.tableSort.key === k) state.tableSort.dir = state.tableSort.dir === 'asc' ? 'desc' : 'asc';
+        else state.tableSort = { key: k, dir: k === 'date' ? 'desc' : 'desc' };
+        state.tablePage = 0;
+        renderAll();
+      },
+    }, label + ' ', active ? h('span', { class: 'arrow' }, dir === 'asc' ? '▲' : '▼') : '');
+  };
+
+  const box = $('ordersTable');
+  box.replaceChildren();
+  if (!rows.length) {
+    box.append(h('div', { class: 'empty' }, t('noMatch')));
+  } else {
+    box.append(h('table', null,
+      h('thead', null, h('tr', null,
+        h('th', null, t('hOrderId')),
+        sortTh(t('hDate'), 'date', false),
+        h('th', null, t('hCountry')),
+        sortTh(t('hCurrency'), 'currency', false),
+        sortTh(t('hAmount'), 'amount', true),
+        sortTh(t('hEstUsd'), 'usd', true),
+        h('th', null, t('hClass')),
+        h('th', null, t('hStatus')))),
+      h('tbody', null, pageRows.map(o => {
+        const usd = usdMinor(o);
+        const excluded = isExcluded(o);
+        return h('tr', { class: excluded ? 'row-excluded' : undefined },
+          h('td', { class: 'mono' }, String(o.orderId ?? '')),
+          h('td', null, String(o.createTime || '')),
+          h('td', null, countryOf(o.language)),
+          h('td', null, String(o.currencyType || '?')),
+          h('td', { class: 'num' }, nativeFmt.format(amountMinor(o) / 100)),
+          h('td', { class: 'num' }, usd == null ? '—' : dollars(usd)),
+          h('td', null, excluded
+            ? h('span', { class: 'chip-status excluded' }, t('clExcluded'))
+            : h('span', { class: 'chip-status included' }, t('clIncluded'))),
+          h('td', null, isReturned(o)
+            ? h('span', { class: 'chip-status returned' }, '↩ ' + t('stReturned'))
+            : h('span', { class: 'chip-status completed' }, '✓ ' + t('stCompleted'))));
+      }))));
+  }
+
+  const foot = $('ordersFoot');
+  foot.replaceChildren();
+  if (rows.length) {
+    const first = state.tablePage * pageSize + 1;
+    const last = Math.min(rows.length, (state.tablePage + 1) * pageSize);
+    foot.append(
+      h('span', null, t('pageOf', { a: intFmt.format(first), b: intFmt.format(last), n: intFmt.format(rows.length) })),
+      h('button', {
+        class: 'pagebtn', 'aria-label': t('prevPage'), disabled: state.tablePage === 0 ? '' : undefined,
+        onclick: () => { if (state.tablePage > 0) { state.tablePage--; renderAll(); } },
+      }, '‹'),
+      h('button', {
+        class: 'pagebtn', 'aria-label': t('nextPage'), disabled: state.tablePage >= pages - 1 ? '' : undefined,
+        onclick: () => { if (state.tablePage < pages - 1) { state.tablePage++; renderAll(); } },
+      }, '›'));
+  }
+}
+
+/* ---------- svg path helpers ---------- */
+
+function columnPath(x, y, w, hgt) {
+  const r = Math.min(4, hgt, w / 2);
+  const x2 = x + w, y0 = y + hgt;
+  return `M${x},${y0} V${y + r} Q${x},${y} ${x + r},${y} H${x2 - r} Q${x2},${y} ${x2},${y + r} V${y0} Z`;
+}
+function barPathH(x, y, w, hgt) {
+  const r = Math.min(4, w, hgt / 2);
+  const y2 = y + hgt, x2 = x + w;
+  return `M${x},${y} H${x2 - r} Q${x2},${y} ${x2},${y + r} V${y2 - r} Q${x2},${y2} ${x2 - r},${y2} H${x} Z`;
+}
+function donutArc(cx, cy, rO, rI, a0, a1) {
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  const pt = (r, a) => `${cx + r * Math.cos(a)},${cy + r * Math.sin(a)}`;
+  return `M${pt(rO, a0)} A${rO},${rO} 0 ${large} 1 ${pt(rO, a1)} L${pt(rI, a1)} A${rI},${rI} 0 ${large} 0 ${pt(rI, a0)} Z`;
+}
+function niceCeil(v) {
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v / p;
+  const m = n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10;
+  return m * p;
+}
+function axisMoney(v) {
+  if (v >= 1000) return '$' + (v / 1000).toFixed(v % 1000 ? 1 : 0) + 'K';
+  return '$' + (v % 1 ? v.toFixed(2) : v);
+}
+
+/* ================= timeframe controls ================= */
+
+function setPreset(preset, fetch = true) {
+  state.preset = preset;
+  const today = todayStart();
+  if (preset === 'today') { state.start = today; state.end = today; }
+  else if (preset === '7d') { state.start = addDays(today, -6); state.end = today; }
+  else if (preset === '14d') { state.start = addDays(today, -13); state.end = today; }
+  else if (preset === '30d') { state.start = addDays(today, -29); state.end = today; }
+  syncControls();
+  state.tablePage = 0;
+  if (fetch) loadRange();
+}
+
+function setCustomRange() {
+  const from = $('fromDate').value, to = $('toDate').value;
+  if (!from || !to) return;
+  let start = parseDateInput(from), end = parseDateInput(to);
+  if (start > end) [start, end] = [end, start];
+  const today = todayStart();
+  if (end > today) end = today;
+  if (start > today) start = today;
+  const span = Math.round((end - start) / 86400000) + 1;
+  if (span > CONFIG.MAX_RANGE_DAYS) start = addDays(end, -(CONFIG.MAX_RANGE_DAYS - 1));
+  state.preset = 'custom';
+  state.start = start; state.end = end;
+  syncControls();
+  state.tablePage = 0;
+  loadRange();
+}
+
+function syncControls() {
+  for (const chip of document.querySelectorAll('.chip[data-preset]')) {
+    chip.setAttribute('aria-pressed', String(chip.dataset.preset === state.preset));
+  }
+  $('fromDate').value = dateKey(state.start);
+  $('toDate').value = dateKey(state.end);
+  const maxDay = dateKey(todayStart());
+  $('fromDate').max = maxDay; $('toDate').max = maxDay;
+}
+
+/* ================= static / chrome text ================= */
+
+const PRESET_KEY = { today: 'today', '7d': 'd7', '14d': 'd14', '30d': 'd30' };
+
+// Text that doesn't depend on loaded data — filled in once at boot and again
+// whenever the language toggle flips LANG.
+function applyStaticText() {
+  document.documentElement.lang = I18N[LANG]._locale;
+  $('appTitle').textContent = t('appTitle');
+  $('langBtn').textContent = I18N[LANG]._other;
+  $('langBtn').setAttribute('aria-label', t('langSwitch'));
+  $('refreshBtn').title = t('refresh');
+  $('refreshBtn').setAttribute('aria-label', t('refresh'));
+  $('logoutBtn').title = t('signOut');
+  $('logoutBtn').setAttribute('aria-label', t('signOut'));
+
+  for (const chip of document.querySelectorAll('.chip[data-preset]')) {
+    chip.textContent = t(PRESET_KEY[chip.dataset.preset]);
+  }
+  $('fromLabel').textContent = t('from');
+  $('toLabel').textContent = t('to');
+
+  const seg = $('datasetSeg');
+  seg.setAttribute('aria-label', t('dsGroup'));
+  seg.querySelector('[data-ds="included"]').textContent = t('dsIncluded');
+  seg.querySelector('[data-ds="excluded"]').textContent = t('dsExcluded');
+  seg.querySelector('[data-ds="all"]').textContent = t('dsAll');
+  $('csvViewBtn').querySelector('span').textContent = t('csvView');
+  $('csvAllBtn').querySelector('span').textContent = t('csvAll');
+
+  $('dailyViewChart').textContent = t('chart');
+  $('dailyViewTable').textContent = t('table');
+  $('convTitle').textContent = t('convTitle');
+  $('convSub').textContent = t('convSub');
+  $('convLegacyCap').textContent = t('convLegacyCap');
+  $('convServerCap').textContent = t('convServerCap');
+  $('countryTitle').textContent = t('countryTitle');
+  $('countrySub').textContent = t('countrySub');
+  $('ordersTitle').textContent = t('ordersTitle');
+
+  $('typeFilterLabel').textContent = t('hClass');
+  $('currencyFilterLabel').textContent = t('hCurrency');
+  $('statusFilterLabel').textContent = t('hStatus');
+  $('typeFilter').replaceChildren(
+    h('option', { value: 'all' }, t('fAllClasses')),
+    h('option', { value: 'included' }, t('clIncluded')),
+    h('option', { value: 'excluded' }, t('clExcluded')));
+  $('typeFilter').value = state.tableClass;
+  $('statusFilter').replaceChildren(
+    h('option', { value: 'all' }, t('fAllStatuses')),
+    h('option', { value: 'completed' }, t('stCompleted')),
+    h('option', { value: 'returned' }, t('stReturned')));
+  $('statusFilter').value = state.tableStatus;
+
+  $('loginTitle').textContent = t('loginTitle');
+  $('loginSub').textContent = t('loginSub');
+  $('loginUserLabel').textContent = t('loginUser');
+  $('loginPassLabel').textContent = t('loginPass');
+  $('loginSubmit').textContent = t('loginSubmit');
+}
+
+// The app-bar subtitle depends only on which dataset is selected, not on the
+// loaded data, so it's kept separate from renderAll()'s per-fetch renders.
+function updateAppSub() {
+  if (state.dataset === 'included') $('appSub').textContent = t('subIncluded', { p: pct(SHARE.included) });
+  else if (state.dataset === 'excluded') $('appSub').textContent = t('subExcluded', { p: pct(SHARE.excluded) });
+  else $('appSub').textContent = t('subAll', { p: pct(SHARE.included), q: pct(SHARE.excluded) });
+}
+
+/* ================= wiring ================= */
+
+for (const chip of document.querySelectorAll('.chip[data-preset]')) {
+  chip.addEventListener('click', () => setPreset(chip.dataset.preset));
+}
+$('fromDate').addEventListener('change', setCustomRange);
+$('toDate').addEventListener('change', setCustomRange);
+$('refreshBtn').addEventListener('click', () => { dayCache.clear(); loadRange(); });
+$('typeFilter').addEventListener('change', e => { state.tableClass = e.target.value; state.tablePage = 0; renderAll(); });
+$('currencyFilter').addEventListener('change', e => { state.tableCurrency = e.target.value; state.tablePage = 0; renderAll(); });
+$('statusFilter').addEventListener('change', e => { state.tableStatus = e.target.value; state.tablePage = 0; renderAll(); });
+$('dailyViewChart').addEventListener('click', () => setDailyView('chart'));
+$('dailyViewTable').addEventListener('click', () => setDailyView('table'));
+function setDailyView(view) {
+  state.dailyView = view;
+  $('dailyViewChart').setAttribute('aria-pressed', String(view === 'chart'));
+  $('dailyViewTable').setAttribute('aria-pressed', String(view === 'table'));
+  renderAll();
+}
+
+$('datasetSeg').addEventListener('click', ev => {
+  const btn = ev.target.closest('button[data-ds]');
+  if (!btn) return;
+  state.dataset = btn.dataset.ds;
+  for (const b of $('datasetSeg').querySelectorAll('button[data-ds]')) {
+    b.setAttribute('aria-pressed', String(b === btn));
+  }
+  state.tablePage = 0;
+  updateAppSub();
+  renderAll();
+});
+
+function csvFilename(suffix) {
+  return `orders_${suffix}_${dateKey(state.start)}_to_${dateKey(state.end)}.csv`;
+}
+$('csvViewBtn').addEventListener('click', () => {
+  downloadCsv(csvFilename(state.dataset), ordersToCsv(tableRows(derive())));
+});
+$('csvAllBtn').addEventListener('click', () => {
+  downloadCsv(csvFilename('all'), ordersToCsv(derive().inRangeAll));
+});
+
+$('langBtn').addEventListener('click', () => {
+  LANG = LANG === 'en' ? 'zh' : 'en';
+  try { localStorage.setItem('vis_lang', LANG); } catch (e) { /* storage unavailable */ }
+  buildFormatters();
+  applyStaticText();
+  updateAppSub();
+  renderAll();
+});
+
+let resizeTimer = null;
+new ResizeObserver(() => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { if (!state.loading) renderAll(); }, 150);
+}).observe($('dashboard'));
+
+/* ================= login dialog ================= */
+
+function showLogin(message) {
+  const box = $('loginError');
+  if (message) { box.textContent = message; box.hidden = false; }
+  else { box.hidden = true; }
+  $('loginScrim').hidden = false;
+  $('loginUser').focus();
+}
+function hideLogin() {
+  $('loginScrim').hidden = true;
+  $('loginError').hidden = true;
+}
+
+$('loginForm').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const btn = $('loginSubmit');
+  btn.disabled = true; btn.textContent = t('loginBusy');
+  try {
+    await login($('loginUser').value.trim(), $('loginPass').value);
+    $('loginPass').value = '';
+    hideLogin();
+    dayCache.clear();
+    loadRange();
+  } catch (err) {
+    const box = $('loginError');
+    box.textContent = err.message || String(err);
+    box.hidden = false;
+  }
+  btn.disabled = false; btn.textContent = t('loginSubmit');
+});
+
+$('logoutBtn').addEventListener('click', () => {
+  clearToken();
+  dayCache.clear();
+  setStatus(t('signedOut'), null);
+  showLogin();
+});
+
+/* ================= boot ================= */
+
+applyStaticText();
+updateAppSub();
+if (LOGIN_USERNAME) $('loginUser').value = LOGIN_USERNAME;
+if (LOGIN_PASSWORD) $('loginPass').value = LOGIN_PASSWORD;
+if (token) {
+  setPreset('7d', true);
+} else if (LOGIN_USERNAME && LOGIN_PASSWORD) {
+  setPreset('7d', false);
+  setStatus(t('loading'), null);
+  login(LOGIN_USERNAME, LOGIN_PASSWORD).then(() => {
+    dayCache.clear();
+    loadRange();
+  }).catch(err => {
+    setStatus(t('signedOut'), null);
+    renderAll();
+    showLogin(err.message || null);
+  });
+} else {
+  setPreset('7d', false);
+  setStatus(t('signedOut'), null);
+  renderAll();
+  showLogin();
+}
+</script>
+</body>
+</html>

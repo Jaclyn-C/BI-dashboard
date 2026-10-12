@@ -1,0 +1,32 @@
+# 开发/测试共用 PostgreSQL（DESIGN-20261012-01 §2.1）。
+# 使用：docker compose -f compose.dev.yaml up -d
+# 依赖 .env 的 DATABASE_URL / TEST_DATABASE_URL 默认值（pd:pd@localhost:5432）。
+services:
+  postgres:
+    image: postgres:16
+    container_name: pd-dev-postgres
+    environment:
+      POSTGRES_USER: pd
+      POSTGRES_PASSWORD: pd
+      POSTGRES_DB: pd
+    ports:
+      - "127.0.0.1:5432:5432"  # 只绑本机回环，弱凭据 dev 库不暴露局域网（reviewer 建议）
+    volumes:
+      - pd_dev_pgdata:/var/lib/postgresql/data
+    configs:
+      - source: pd_init_test_db
+        target: /docker-entrypoint-initdb.d/10-create-test-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pd -d pd"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+configs:
+  pd_init_test_db:
+    # 首次初始化时创建 pytest 测试库 pd_test（TEST_DATABASE_URL）
+    content: |
+      CREATE DATABASE pd_test;
+
+volumes:
+  pd_dev_pgdata:

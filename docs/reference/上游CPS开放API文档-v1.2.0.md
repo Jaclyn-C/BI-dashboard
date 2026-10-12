@@ -187,7 +187,8 @@ curl -X POST "https://adminapi.test.netshort.net/test-api/cps/open/oauth2/token"
 
 ## POST /open/order/adSummary（广告收益每日汇总）
 
-- 请求体与 order/list 同形态：`{startDate, endDate, page, pageSize}`（HTML:1022-1024）。
+- 请求体与 order/list 同形态：`{startDate, endDate, page, pageSize}`（HTML:1022-1024）
+- ⚠️ **2026-10-12 18:30 真实实测：单次查询区间不能超过 1 天**（多天区间返回信封错误「查询时间范围不能超过1天」）。参考 HTML 是整区间单请求（HTML:1057），该做法已失效——多天数据必须**逐日请求**（当日 00:00:00 至 23:59:59），按日聚合。此为文档未载、实测发现的上游约束。。
 - 响应：`data.list` 为按日汇总行，实测字段：`date`（截取前 10 位为日期）、`ad_revenue_dollars`（**美元为单位**，非最小单位，HTML:1028-1032）。
 - 口径："该渠道纯新用户"的每日广告收益（HTML 广告卡副标题）。
 

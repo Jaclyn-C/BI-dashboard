@@ -1,0 +1,75 @@
+{
+  "common": {
+    "appName": "合作方数据看板",
+    "languageSwitch": "切换到英文",
+    "pageTitle": {
+      "login": "登录 · 合作方数据看板",
+      "register": "注册账号 · 合作方数据看板",
+      "forgot": "重置密码 · 合作方数据看板",
+      "dashboard": "合作方数据看板"
+    }
+  },
+  "auth": {
+    "common": {
+      "email": "邮箱",
+      "password": "密码",
+      "newPassword": "新密码",
+      "nickname": "昵称",
+      "code": "验证码",
+      "sendCode": "发送验证码",
+      "resend": "重发（{{n}}秒）",
+      "sending": "发送中…",
+      "fieldRequired": "此项为必填项。",
+      "goRegister": "还没有账号？注册一个",
+      "goForgot": "忘记密码？",
+      "goLogin": "返回登录"
+    },
+    "login": {
+      "title": "登录",
+      "sub": "使用您的合作平台账号加载收入报表。",
+      "submit": "登录",
+      "busy": "登录中…",
+      "rememberMe": "记住密码"
+    },
+    "register": {
+      "title": "注册账号",
+      "sub": "使用邮箱注册，即可使用数据看板。",
+      "submit": "注册",
+      "busy": "注册中…"
+    },
+    "forgot": {
+      "title": "重置密码",
+      "sub": "我们将向您的邮箱发送验证码。",
+      "submit": "重置密码",
+      "busy": "重置中…",
+      "success": "密码已重置，请使用新密码登录。"
+    },
+    "error": {
+      "sessionExpired": "登录状态已过期，请重新登录。",
+      "network": "无法访问接口（网络问题，或接口不允许跨域请求）。",
+      "VALIDATION_ERROR": "请检查标红的输入项。",
+      "INVALID_CREDENTIALS": "邮箱或密码错误。",
+      "UNAUTHORIZED": "登录状态已过期，请重新登录。",
+      "EMAIL_ALREADY_REGISTERED": "该邮箱已被注册。",
+      "EMAIL_NOT_REGISTERED": "该邮箱未注册。",
+      "NOT_FOUND": "资源不存在。",
+      "VERIFICATION_CODE_INVALID": "验证码无效或已过期，请重新获取。",
+      "CODE_SEND_COOLDOWN": "验证码刚发送，请稍候再试。",
+      "CODE_SEND_HOURLY_LIMIT": "验证码请求次数过多，请稍后再试。",
+      "EMAIL_SEND_FAILED": "验证码邮件发送失败，请稍后再试。",
+      "INTERNAL_ERROR": "服务内部错误，请稍后再试。",
+      "FALLBACK": "请求失败（{{status}}），请重试。"
+    },
+    "validation": {
+      "emailInvalid": "请输入合法的邮箱地址（不超过 254 字符）。",
+      "passwordInvalid": "密码需 8–64 位，且同时包含字母和数字。",
+      "nicknameInvalid": "昵称需 2–30 个字符（字母、数字、_ - 或中文）。",
+      "codeInvalid": "验证码为 6 位数字。"
+    }
+  },
+  "dashboard": {
+    "placeholder": "看板功能将在后续版本提供。",
+    "welcome": "已登录：{{nickname}}（{{email}}）",
+    "signOut": "退出登录"
+  }
+}

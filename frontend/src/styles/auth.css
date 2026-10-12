@@ -1,0 +1,272 @@
+/* ============================================================
+   auth.css — 认证页样式
+   类名沿用参考 HTML（.logincard/.tf/.loginerror/.btn-filled，HTML:207-235）
+   响应式按 DESIGN §5.3：仅 768px 一个断点，375/1280 双基准。
+   ============================================================ */
+
+/* ---------- 页面外壳：全屏居中 ---------- */
+.authpage {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: var(--page);
+}
+
+/* ---------- 卡片（对标参考 .logincard） ---------- */
+.logincard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  padding: 28px;
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.logincard h2 {
+  font-size: 20px;
+  font-weight: 500;
+}
+.loginsub {
+  color: var(--ink2);
+  font-size: 13px;
+  margin-top: -8px;
+}
+
+/* ---------- 表单字段（对标参考 .tf） ---------- */
+.tf {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.tf span {
+  font-size: 12px;
+  color: var(--ink2);
+}
+.tf input {
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--baseline);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.tf input:focus {
+  outline: none;
+  border-color: var(--series);
+  box-shadow: 0 0 0 1px var(--series);
+}
+.tf input:disabled {
+  opacity: 0.5;
+}
+.tf .fielderr {
+  color: var(--crit);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+/* 字段行：验证码输入 + 发码按钮并排（桌面），窄屏换行 */
+.tfrow {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.tfrow .tf {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---------- 错误提示条（对标参考 .loginerror） ---------- */
+.loginerror {
+  background: rgba(208, 59, 59, 0.1);
+  color: var(--crit);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+/* 成功提示（重置密码成功等引导信息） */
+.loginsuccess {
+  background: rgba(12, 163, 12, 0.1);
+  color: var(--good-text);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 按钮（对标参考 .btn-filled） ---------- */
+.btn-filled {
+  border: none;
+  border-radius: 999px;
+  background: var(--series);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 11px 20px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.btn-filled:hover {
+  filter: brightness(1.08);
+}
+.btn-filled:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.btn-filled:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* 发码按钮：次级样式，靠文字与间距表达层级 */
+.btn-code {
+  border: 1px solid var(--baseline);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: none;
+  margin-top: 2px;
+}
+.btn-code:hover:not(:disabled) {
+  background: var(--series-softer);
+  color: var(--ink);
+}
+.btn-code:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn-code:focus-visible {
+  outline: 2px solid var(--series);
+  outline-offset: 2px;
+}
+
+/* ---------- 勾选框（记住密码，极简文字风） ---------- */
+.checkrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink2);
+  cursor: pointer;
+  user-select: none;
+}
+.checkrow input {
+  accent-color: var(--series);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+.checkrow:focus-within {
+  outline: 2px solid var(--series);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- 页脚链接（注册 / 找回密码 / 去登录） ---------- */
+.authlinks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: -2px;
+}
+.authlinks a {
+  color: var(--series);
+  font-size: 13px;
+  text-decoration: none;
+}
+.authlinks a:hover {
+  text-decoration: underline;
+}
+.authlinks a:focus-visible {
+  outline: 2px solid var(--series);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---------- 语言切换 ---------- */
+.langtoggle {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+.langtoggle button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.langtoggle button:hover {
+  background: var(--series-softer);
+  color: var(--ink);
+}
+.langtoggle button:focus-visible {
+  outline: 2px solid var(--series);
+  outline-offset: 2px;
+}
+
+/* ---------- 受保护占位页 ---------- */
+.dashpage {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: var(--page);
+}
+.dashpage h1 {
+  font-size: 22px;
+  font-weight: 500;
+}
+.dashpage .sub {
+  color: var(--ink2);
+  font-size: 13px;
+}
+.dashpage .row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* ---------- 响应式（DESIGN §5.3：<768px 手机，375px 基准） ---------- */
+@media (max-width: 767px) {
+  .authpage {
+    align-items: center;
+    padding: 16px;
+  }
+  .logincard {
+    /* 桌面 max-width:360px 居中；手机 100% 自适应，长内容 overflow-wrap 防溢出 */
+    max-width: 100%;
+  }
+  .tf input {
+    /* 规避 iOS Safari 聚焦 <16px 自动放大 */
+    font-size: 16px;
+  }
+  .btn-filled,
+  .btn-code {
+    width: 100%;
+  }
+  .tfrow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tfrow .btn-code {
+    margin-top: 0;
+  }
+}

@@ -1,0 +1,68 @@
+/* ============================================================
+   theme.css — CSS 变量表（明/暗两套）
+   从 docs/reference/visualisation.html :root（11-22 亮 / 23-36 暗）平移。
+   DESIGN §5.4：本期只迁认证页所需子集；KPI/图表专用变量（cat1-8、inc/exc/ad）
+   归后续看板需求再迁。深色模式跟随系统 prefers-color-scheme，无 JS、无手动开关。
+   ============================================================ */
+
+:root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface: #fcfcfb;
+  --ink: #0b0b0b;
+  --ink2: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --baseline: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.1);
+  --series: #2a78d6;
+  --series-soft: rgba(42, 120, 214, 0.1);
+  --series-softer: rgba(42, 120, 214, 0.06);
+  --good: #0ca30c;
+  --good-text: #006300;
+  --crit: #d03b3b;
+  --warn: #fab219;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.1);
+    --series: #3987e5;
+    --series-soft: rgba(57, 135, 229, 0.18);
+    --series-softer: rgba(57, 135, 229, 0.1);
+    --good-text: #0ca30c;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* ---------- reset（对标参考 HTML * 规则） ---------- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  font-family: 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  background: var(--page);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+#root {
+  min-height: 100dvh;
+}

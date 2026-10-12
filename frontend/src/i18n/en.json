@@ -1,0 +1,75 @@
+{
+  "common": {
+    "appName": "Partner Dashboard",
+    "languageSwitch": "Switch to Chinese",
+    "pageTitle": {
+      "login": "Sign in · Partner Dashboard",
+      "register": "Create account · Partner Dashboard",
+      "forgot": "Reset password · Partner Dashboard",
+      "dashboard": "Partner Dashboard"
+    }
+  },
+  "auth": {
+    "common": {
+      "email": "Email",
+      "password": "Password",
+      "newPassword": "New password",
+      "nickname": "Nickname",
+      "code": "Verification code",
+      "sendCode": "Send code",
+      "resend": "Resend ({{n}}s)",
+      "sending": "Sending…",
+      "fieldRequired": "This field is required.",
+      "goRegister": "No account? Create one",
+      "goForgot": "Forgot password?",
+      "goLogin": "Back to sign in"
+    },
+    "login": {
+      "title": "Sign in",
+      "sub": "Use your Partner Platform account to load the revenue report.",
+      "submit": "Sign in",
+      "busy": "Signing in…",
+      "rememberMe": "Remember password"
+    },
+    "register": {
+      "title": "Create account",
+      "sub": "Register with your email to use the dashboard.",
+      "submit": "Register",
+      "busy": "Registering…"
+    },
+    "forgot": {
+      "title": "Reset password",
+      "sub": "We will email a verification code to your address.",
+      "submit": "Reset password",
+      "busy": "Resetting…",
+      "success": "Password has been reset. Please sign in with your new password."
+    },
+    "error": {
+      "sessionExpired": "Your session expired — please sign in again.",
+      "network": "Could not reach the API (network problem, or the API does not allow cross-origin requests).",
+      "VALIDATION_ERROR": "Please check the highlighted fields.",
+      "INVALID_CREDENTIALS": "Invalid email or password.",
+      "UNAUTHORIZED": "Your session expired — please sign in again.",
+      "EMAIL_ALREADY_REGISTERED": "This email is already registered.",
+      "EMAIL_NOT_REGISTERED": "This email is not registered.",
+      "NOT_FOUND": "Not found.",
+      "VERIFICATION_CODE_INVALID": "The verification code is invalid or has expired. Please request a new one.",
+      "CODE_SEND_COOLDOWN": "A code was just sent. Please wait before requesting another.",
+      "CODE_SEND_HOURLY_LIMIT": "Too many codes requested. Please try again later.",
+      "EMAIL_SEND_FAILED": "The verification email could not be sent. Please try again later.",
+      "INTERNAL_ERROR": "Something went wrong on our side. Please try again later.",
+      "FALLBACK": "Request failed ({{status}}). Please try again."
+    },
+    "validation": {
+      "emailInvalid": "Enter a valid email address (max 254 characters).",
+      "passwordInvalid": "Password must be 8–64 characters and contain both letters and numbers.",
+      "nicknameInvalid": "Nickname must be 2–30 characters (letters, numbers, _ - , or Chinese).",
+      "codeInvalid": "The code is 6 digits."
+    }
+  },
+  "dashboard": {
+    "placeholder": "Dashboard content will arrive in a later release.",
+    "welcome": "Signed in as {{nickname}} ({{email}})",
+    "signOut": "Sign out"
+  }
+}

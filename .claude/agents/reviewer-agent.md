@@ -14,7 +14,7 @@ tools: Read, Glob, Grep
 
 评审维度（按本项目优先级）：
 
-1. **红线检查**（CLAUDE.md 第 9 节）：真实凭据出现、口径变更无 REQ、float 金额、绕过 `src/api/`、模型改动无迁移、硬编码文案、供应商数据越权、main 直提
+1. **红线检查**（CLAUDE.md 第 9 节）：真实凭据出现、口径变更无 REQ、float 金额、绕过 `src/api/`、模型改动无迁移、硬编码文案、供应商数据越权、main 直提、图标库/emoji 界面图标
 2. **金额正确性**：计算全链路 Decimal/Numeric；口径与 `.claude/memory/business.md` 一致；前端只渲染不计算
 3. **供应商安全**：下游接口鉴权、数据隔离、限流；OpenAPI tag/描述完整（对外文档质量）
 4. **上游健壮性**：token 缓存复用、二分拉取边界（深度/并发）、失败降级、同步幂等

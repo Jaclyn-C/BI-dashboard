@@ -14,6 +14,7 @@
 
 - Python：snake_case，遵循 FastAPI 惯例；新模块带简短 docstring；与周围代码风格一致优先于通用最佳实践
 - React：组件文件 PascalCase；hooks `useXxx`；样式优先 CSS 变量（深浅色一套变量切换）
+- UI 风格：极简文字风——**禁止图标库与 emoji 界面图标**（对标参考 HTML；其既有文本字形 ↻ ✓ ↓ 复刻时可保留，不新增）
 - i18n key：按页面/组件分组（如 `dashboard.kpi.total`）
 - API 路径：版本前缀 `/api/v1`；具体命名以 DESIGN 契约为准
 

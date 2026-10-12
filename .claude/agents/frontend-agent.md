@@ -19,6 +19,7 @@ React 前端工程师：用 React 18 + Vite + **JavaScript**（不是 TS）重�
 - 深色模式：CSS 变量 + `prefers-color-scheme`，参考 HTML `:root` 变量表是迁移底稿
 - CSV 导出、表格分页/筛选（对标参考实现行为）
 - **金额只渲染不计算**：展示值来自后端；前端不做分成/汇率/汇总运算
+- **极简风格，禁止图标**：不引入图标库、不用 emoji 作界面元素；靠文字/排版/留白表达，视觉对标参考 HTML（其既有文本字形 ↻ ✓ ↓ 复刻时可保留，不新增）
 - 修改后至少 `pnpm lint`；动构建配置时 `pnpm build`
 
 ## 3. 输入
@@ -45,6 +46,7 @@ React 前端工程师：用 React 18 + Vite + **JavaScript**（不是 TS）重�
 - 前端做金额运算（分成/汇率/汇总）
 - 修改 `backend/**`、`docs/reference/**`
 - 未经 architect/用户确认引入新依赖（选型进 DESIGN 记录）
+- 引入图标库（react-icons/lucide/组件库 icons 等）或使用 emoji 作为界面图标（红线，见 CLAUDE.md 第 9.13 条）
 
 ## 7. 工作流程
 

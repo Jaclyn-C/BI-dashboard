@@ -1,0 +1,51 @@
+[project]
+name = "partner-dashboard-backend"
+version = "0.1.0"
+description = "Partner Dashboard 后端（FastAPI + SQLAlchemy 2 + Alembic，REQ-20261012-01）"
+requires-python = ">=3.12"
+dependencies = [
+    "aiosmtplib>=3.0,<5",
+    "alembic>=1.13",
+    "argon2-cffi>=23.1",
+    "email-validator>=2.2",
+    "fastapi>=0.115",
+    "httpx>=0.27",
+    "psycopg[binary]>=3.2",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+    "pyjwt>=2.9",
+    "sqlalchemy>=2.0",
+    "uvicorn[standard]>=0.30",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+# 备注：依赖锁定按 DESIGN D6 用 uv（生成 uv.lock）。本机未装 uv 时以
+# python3 -m venv + pip 安装（可复现性弱于锁文件，见变更说明）；uv 可用后执行
+# `uv lock` 生成锁文件即可，本文件是依赖唯一真源。
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# B008 与 FastAPI 官方惯用法（参数默认值 Depends(...)）冲突，按社区惯例豁免
+extend-ignore = ["B008"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

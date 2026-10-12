@@ -6,13 +6,22 @@
 
 合作伙伴收益数据平台（Partner Dashboard）：把单文件 HTML 看板（`docs/reference/visualisation.html`，行为规格）重构为前后端分离系统，并扩展「处理 → 供给下游」链路。
 
+**一手资料（改业务逻辑前必读）**：`docs/research/01-调研发现与逆向分析.md`（遗留系统逆向 + 过滤规则数据分析）、`docs/planning/02-重构计划与待确认清单.md`（目标架构、A/B 清单、分阶段计划）。
+
 核心业务链路：
 
 ```
-上游 API（订单/广告收益，OAuth2）→ 同步任务落库 → 内部看板（React）
-                                          ↓ 处理（筛选/分配/调整）
-                                   下游供应商 API（API key 鉴权 + OpenAPI 文档）
+上游 netshort CPS API（飞书文档 v1.2.0 的 8 个接口，当前只用 3 个）
+        ↓（新系统运行时唯一出站依赖）
+同步任务落库 → 内部看板（React）
+        ↓ 处理（筛选/分配/调整）
+下游供应商 API（API key 鉴权 + OpenAPI 文档）
 ```
+
+⚠️ 两个关键事实：
+
+- **前开发自建后端（api.tfctechnology.com）代码已遗失，运行时禁止依赖**——其 `/auth/login` 与 `/data/partner/order/report` 由我方重写；仅 Phase 0 数据记录器临时调用它留存分类标签真值（见 planning/02）。
+- **订单分类规则（20%/70% 归属）是黑盒**：统计分析确认其依赖两边接口都不暴露的隐藏属性（确定性、约 80/20、与退款相关，见 research/01 §5）。分类器必须做成可插拔；规则确认（B1）前**不得猜测实现、不得对外输出分类金额**。
 
 三个能力域：
 
@@ -41,8 +50,12 @@ partner-dashboard/
 │  └─ memory/                       ← 项目知识库（Agent 边干边维护）
 ├─ docs/
 │  ├─ reference/visualisation.html  ← 参考实现（行为规格，凭据已抹除，禁止删除）
+│  ├─ research/                     ← 遗留系统调研与逆向分析（一手资料）
+│  ├─ planning/                     ← 重构计划与待确认清单（一手资料）
 │  ├─ requirements/REQ-*.md         ← 需求文档
 │  └─ design/DESIGN-*.md            ← 技术方案与任务包
+├─ tools/                           ← 对账/验收脚本（export_diff.py 等）
+├─ data/                            ← 本地数据分析集（真实业务数据，gitignore 不入库）
 ├─ backend/                         ← FastAPI
 │  ├─ app/
 │  │  ├─ config.py                  ← pydantic-settings（读 .env）
@@ -114,3 +127,5 @@ partner-dashboard/
 8. **禁止**删除或"清理" `docs/reference/visualisation.html` 与 `.claude/` 配置。
 9. **禁止**直接在 main 上提交开发变更；禁止 `--no-verify`、强推主干。
 10. **禁止**跳过验证义务（对应侧 ruff/pytest/eslint 至少跑一次并如实报告）。
+11. **禁止**在运行时调用前开发自建后端（api.tfctechnology.com）作为依赖（仅 Phase 0 数据记录器例外）；新系统出站只允许调飞书文档内的 8 个上游接口。
+12. **禁止**在分类规则确认（planning/02 B1）前用猜测规则实现订单分类器，或对外输出 20%/70% 分类金额——宁出全量视图，不出错误的钱。

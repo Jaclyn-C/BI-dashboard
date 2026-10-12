@@ -4,9 +4,15 @@
 - DB 相关测试一律走本地 PostgreSQL（TEST_DATABASE_URL，默认 compose.dev.yaml 的 pd_test），
   不用 SQLite 替代，避免方言漂移；
 - PostgreSQL 不可达时 DB 夹具整体 skip（原因如实展示），纯逻辑单测照常运行。
+
+同步隔离（DESIGN-20261012-02 §3.4 m7）：在任何 app 导入前**强制**
+SYNC_ENABLED=false——不依赖 .env 凭据恰好为空（调度器另有凭据双保险）。
 """
 
 import os
+
+# 必须先于 app 导入：环境变量优先级高于 .env（pydantic-settings），见上
+os.environ["SYNC_ENABLED"] = "false"
 
 import pytest
 from fastapi.testclient import TestClient

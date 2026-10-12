@@ -3,11 +3,12 @@
 凭据一律走 .env / 环境变量，代码与日志中不出现真实值（AC-S3）。
 """
 
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import model_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
@@ -54,9 +55,44 @@ class Settings(BaseSettings):
     # ===== CORS（dev 白名单；生产同源后收紧为空，§6.10）=====
     cors_origins: str = "http://localhost:5173"
 
+    # ===== 上游 CPS（REQ-20261012-02 DESIGN §3.6；凭据只进 .env，AC-SEC1）=====
+    upstream_base: str = "https://adminapi.netshort.com/prod-api/cps"
+    upstream_client_id: str = ""
+    upstream_client_secret: str = ""
+    #: 拉取参数照搬参考 HTML CONFIG 并配置化（D10）
+    upstream_page_size: int = 1000
+    upstream_max_split_depth: int = 6
+    upstream_min_split_window_seconds: int = 120
+    upstream_concurrency: int = 4  # AC-U7
+    upstream_timeout_seconds: int = 30  # AC-U7
+
+    # ===== 同步调度（D1/D2/D3）=====
+    #: 调度总开关（测试/本地关；测试由 tests/conftest.py 强制 false，DESIGN §3.4 m7）
+    sync_enabled: bool = True
+    sync_interval_minutes: int = 30  # D1
+    sync_lookback_days: int = 3  # D2：每次滚动重拉最近 N 天（含当日）
+    sync_backfill_days: int = 92  # D3：期望覆盖域（首次部署自动回填）
+
+    # ===== 分成比例（D13：B1 期间不接入任何输出路径，仅 share_service 读取）=====
+    share_included: Decimal = Decimal("0.20")
+    share_excluded: Decimal = Decimal("0.70")
+
+    @field_validator("share_included", "share_excluded")
+    @classmethod
+    def _check_share_ratio(cls, value: Decimal) -> Decimal:
+        """分成比例必须是 (0, 1] 内的 Decimal（防手滑配出 20 倍）。"""
+        if not Decimal("0") < value <= Decimal("1"):
+            raise ValueError("share ratio must be in (0, 1]")
+        return value
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    @property
+    def upstream_credentials_configured(self) -> bool:
+        """上游凭据是否已配置（调度器启动的第二道保险，DESIGN §3.4/m7）。"""
+        return bool(self.upstream_client_id and self.upstream_client_secret)
 
     @property
     def cors_origin_list(self) -> list[str]:

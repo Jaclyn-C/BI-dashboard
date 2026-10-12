@@ -2,6 +2,11 @@
 
 > 目标：公网服务器部署，供应商经公网调用下游 API。首次实际部署后由负责 Agent 补充实测细节。
 
+## 代码远端
+
+- GitHub `Jaclyn-C/BI-dashboard`（https://github.com/Jaclyn-C/BI-dashboard.git，用户受控）。
+- 推送策略（用户指示 2026-10-12）：**每个功能完成后先交用户验证，用户确认没问题才推送**。
+
 ## 形态（计划）
 
 - Docker Compose：`api`（FastAPI/uvicorn）+ `postgres` + 反向代理（Caddy 或 Nginx，HTTPS/自动证书）

@@ -106,7 +106,8 @@ partner-dashboard/
 - **禁止直接在 main 上开发**：任何变更先建 `feature/<REQ编号>-<简述>` 分支（如 `feature/REQ-20261012-01-supplier-api`），提交前走 review-flow。
 - 提交信息 `type(scope): 中文描述（REQ 编号）`，scope ∈ `api`（后端）/ `web`（前端）/ `db`（迁移）/ `ai`（agent 配置与 memory）/ `docs`；一次提交聚焦一件事，跨前后端拆开提交。
 - 禁止提交：`.env`、`node_modules/`、`dist/`、`__pycache__/`、`.venv/`、`.claude/settings.local.json`、数据库备份文件。
-- 参考实现历史版本中出现过真实凭据（已抹除）——**任何残留凭据外泄都是事故**，严禁把本仓库推到不受控的外部仓库。
+- 远端仓库：GitHub `Jaclyn-C/BI-dashboard`（用户创建并授权的**受控远端**，2026-10-12 起）。**推送时机：每个功能经用户验证确认后**由主对话执行 push，review-flow 之外不推。
+- 历史版本中出现过真实凭据（已全部抹除并重写历史）——**任何残留凭据外泄都是事故**；除上述受控远端外严禁推送任何其他仓库。
 
 ## 8. Agent 协作规则
 

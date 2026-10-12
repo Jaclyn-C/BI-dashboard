@@ -1,5 +1,12 @@
-"""FastAPI 应用装配：CORS、统一错误信封处理器、路由挂载、/healthz（DESIGN §2.1/§3.2）。"""
+"""FastAPI 应用装配：CORS、统一错误信封处理器、路由挂载、/healthz（DESIGN §2.1/§3.2）。
 
+同步调度（DESIGN-20261012-02 §3.4）：lifespan 启动——先做孤儿 running 行
+清理（m9），再按双保险条件（SYNC_ENABLED 且上游凭据已配置）拉起调度协程；
+停机时 cancel + await。
+"""
+
+import asyncio
+import contextlib
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -18,19 +25,42 @@ from app.api.errors import (
 )
 from app.api.v1 import api_router
 from app.config import get_settings
+from app.services import sync_service
 from app.services.email_sender import LogEmailSender, create_email_sender
+from app.upstream import scheduler as sync_scheduler
 
 logger = logging.getLogger("app")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """启动装配：邮件发送器（SMTP / 开发日志降级，DESIGN §6.4）。"""
+    """启动装配：邮件发送器（SMTP / 开发日志降级）+ 同步调度器。"""
     settings = get_settings()
     app.state.email_sender = create_email_sender(settings)
     if isinstance(app.state.email_sender, LogEmailSender):
         logger.warning("SMTP_HOST 未配置且为开发环境：验证码走日志降级（生产禁止）")
+
+    # 同步调度（REQ-20261012-02）：孤儿行清理先行（m9），再启动循环任务
+    app.state.sync_task = None
+    if sync_scheduler.scheduler_should_start(settings):
+        orphans = await asyncio.to_thread(sync_service.cleanup_orphan_runs)
+        if orphans:
+            logger.warning("cleaned %d orphaned running sync_run row(s)", orphans)
+        app.state.sync_task = asyncio.create_task(sync_scheduler.scheduler_loop())
+        logger.info(
+            "sync scheduler started (interval=%dmin lookback=%dd backfill=%dd)",
+            settings.sync_interval_minutes,
+            settings.sync_lookback_days,
+            settings.sync_backfill_days,
+        )
     yield
+
+    task = getattr(app.state, "sync_task", None)
+    if task is not None:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+        app.state.sync_task = None
 
 
 def create_app() -> FastAPI:

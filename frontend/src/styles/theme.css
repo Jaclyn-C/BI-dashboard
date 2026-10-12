@@ -1,8 +1,8 @@
 /* ============================================================
    theme.css — CSS 变量表（明/暗两套）
    从 docs/reference/visualisation.html :root（11-22 亮 / 23-36 暗）平移。
-   DESIGN §5.4：本期只迁认证页所需子集；KPI/图表专用变量（cat1-8、inc/exc/ad）
-   归后续看板需求再迁。深色模式跟随系统 prefers-color-scheme，无 JS、无手动开关。
+   REQ-20261012-02 DESIGN §6.5：补齐看板专用变量（cat1-8、inc/exc/ad，明暗两套）。
+   深色模式跟随系统 prefers-color-scheme，无 JS、无手动开关。
    ============================================================ */
 
 :root {
@@ -18,10 +18,21 @@
   --series: #2a78d6;
   --series-soft: rgba(42, 120, 214, 0.1);
   --series-softer: rgba(42, 120, 214, 0.06);
+  --cat1: #2a78d6;
+  --cat2: #eb6834;
+  --cat3: #1baf7a;
+  --cat4: #eda100;
+  --cat5: #e87ba4;
+  --cat6: #008300;
+  --cat7: #4a3aa7;
+  --cat8: #e34948;
   --good: #0ca30c;
   --good-text: #006300;
   --crit: #d03b3b;
   --warn: #fab219;
+  --inc: #2a78d6;
+  --exc: #c8501f;
+  --ad: #1baf7a;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(0, 0, 0, 0.05);
 }
 
@@ -39,7 +50,18 @@
     --series: #3987e5;
     --series-soft: rgba(57, 135, 229, 0.18);
     --series-softer: rgba(57, 135, 229, 0.1);
+    --cat1: #3987e5;
+    --cat2: #d95926;
+    --cat3: #199e70;
+    --cat4: #c98500;
+    --cat5: #d55181;
+    --cat6: #008300;
+    --cat7: #9085e9;
+    --cat8: #e66767;
     --good-text: #0ca30c;
+    --inc: #3987e5;
+    --exc: #e0743f;
+    --ad: #199e70;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   }
 }

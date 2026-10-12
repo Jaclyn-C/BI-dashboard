@@ -1,0 +1,62 @@
+// ============================================================
+// AppBar.jsx — 应用栏（HTML:241-251）：标题 + 副标题（B1 毛额口径 AC-D2）+
+// 状态行 + 语言切换 + 刷新 ↻ + 退出。
+// 文本字形 ↻(↻) / 退出(⮑) 照搬参考 HTML 实体（AC-V3 白名单）。
+// ============================================================
+
+import { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { setLang } from '../../i18n'
+
+/** 状态行（HTML statusline/dot）：dot: 'ok' | 'err' | null（中性加载态） */
+export function StatusLine({ dot, text, note }) {
+  const dotClass = dot === 'ok' ? 'dot ok' : dot === 'err' ? 'dot err' : 'dot'
+  return (
+    <div className="statusline">
+      <span className={dotClass} />
+      <span>{text}</span>
+      {note ? <span className="note">{note}</span> : null}
+    </div>
+  )
+}
+
+export default function AppBar({ sub, status, onRefresh, onLogout }) {
+  const { t, i18n } = useTranslation()
+
+  const toggleLang = useCallback(() => {
+    setLang(i18n.language === 'zh' ? 'en' : 'zh')
+  }, [i18n])
+
+  return (
+    <header className="appbar">
+      <div>
+        <h1>{t('common.appName')}</h1>
+        <div className="sub">{sub}</div>
+      </div>
+      <div className="spacer" />
+      {status}
+      <button type="button" className="chip" onClick={toggleLang} aria-label={t('common.languageSwitch')}>
+        {t('common.languageSwitch')}
+      </button>
+      <button
+        type="button"
+        className="iconbtn"
+        onClick={onRefresh}
+        title={t('dashboard.refresh')}
+        aria-label={t('dashboard.refresh')}
+      >
+        {'↻'}
+      </button>
+      <button
+        type="button"
+        className="iconbtn"
+        onClick={onLogout}
+        title={t('dashboard.signOut')}
+        aria-label={t('dashboard.signOut')}
+      >
+        {'\u2B91'}
+      </button>
+    </header>
+  )
+}

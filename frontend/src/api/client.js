@@ -103,6 +103,63 @@ export async function request(path, { method = 'GET', body = null, auth = true }
 }
 
 /**
+ * 带 token 的文件下载（DESIGN §5.4：orders.csv 以 Authorization fetch → blob → a[download] 落盘）。
+ * 文件名优先取响应 Content-Disposition 的 filename=，缺失时用 fallbackFilename。
+ * @param {string} path 以 '/' 开头的 API 路径（含 query）
+ * @param {{filename: string}} options fallback 文件名
+ */
+export async function requestDownload(path, { filename }) {
+  const headers = {}
+  const token = getToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  let res
+  try {
+    res = await fetch(BASE_URL + path, { headers })
+  } catch (err) {
+    throw new ApiError({ code: 'NETWORK', message: 'network error' })
+  }
+
+  if (res.status === 401 && token) {
+    clearToken()
+    redirectToExpiredLogin()
+    throw new ApiError({ code: 'UNAUTHORIZED', message: 'session expired', status: 401 })
+  }
+
+  if (!res.ok) {
+    let payload = null
+    try {
+      payload = await res.json()
+    } catch (e) {
+      /* 非 JSON 响应体 */
+    }
+    const envelope = payload && payload.error ? payload.error : {}
+    throw new ApiError({
+      code: envelope.code || 'HTTP_ERROR',
+      message: envelope.message || `HTTP ${res.status}`,
+      status: res.status,
+      details: envelope.details || null,
+    })
+  }
+
+  const blob = await res.blob()
+  const disposition = res.headers.get('Content-Disposition') || ''
+  const match = disposition.match(/filename="?([^";]+)"?/i)
+  saveBlob(blob, match ? match[1] : filename)
+}
+
+function saveBlob(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+/**
  * 把 ApiError 映射为 i18n key（+ 插值变量）。
  * 错误码 → auth.error.<code>；映射缺失时兜底 FALLBACK（用 HTTP 状态）。
  */

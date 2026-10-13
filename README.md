@@ -86,16 +86,15 @@ pnpm dev
 ## 公网演示隧道（Cloudflare Tunnel）
 
 作用：不开部署、不用服务器，把本机跑着的看板临时暴露到公网，给外部的人看。
-**前提：前后端已按上面启动，Mac 保持开机不合盖。**
-
-开一个新终端，执行：
+**这是演示环境：Mac 必须开机（合盖/睡眠链接即断），别人要看提前说一声，跑一下下面命令。**
 
 ```bash
-/opt/homebrew/opt/cloudflared/bin/cloudflared tunnel --url http://localhost:5173
+./start-demo.sh    # 一键：数据库→后端→前端→隧道，输出公网地址（每次地址随机）
+./stop-demo.sh     # 一键关闭：隧道+前端+后端（数据库保留，数据不丢）
 ```
 
-- 输出里的 `https://xxxxx.trycloudflare.com` 就是公网访问地址（每次启动都不同），发给对方即可
-- **关闭隧道：在这个终端按 `Ctrl + C`**（地址随之失效）
+- 演示账号随脚本输出一起给出（admin@admin.com / admin123）
+- 手动单开隧道：`/opt/homebrew/opt/cloudflared/bin/cloudflared tunnel --url http://localhost:5173`
 - 没装 cloudflared 的话先装：`brew install cloudflared`
 
 ## 常用排查命令

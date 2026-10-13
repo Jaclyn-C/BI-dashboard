@@ -221,9 +221,13 @@
   color: var(--ink2);
 }
 .tile .value {
-  font-size: 26px;
+  font-size: 21px;
   font-weight: 500;
   margin-top: 6px;
+  white-space: nowrap;
+}
+.tile .value.small {
+  font-size: 17px;
 }
 .tile .aux {
   font-size: 12px;
@@ -231,10 +235,14 @@
   margin-top: 4px;
 }
 .hero .value {
-  font-size: 52px;
+  font-size: 38px;
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.5px;
+  white-space: nowrap;
+}
+.hero .value.small {
+  font-size: 30px;
 }
 .hero .label {
   font-size: 13px;
@@ -361,9 +369,35 @@
   color: var(--ink2);
   text-align: center;
 }
+@media (max-width: 900px) {
+  .tile .value {
+    font-size: 19px;
+  }
+  .tile .value.small {
+    font-size: 16px;
+  }
+  .hero .value {
+    font-size: 32px;
+  }
+  .hero .value.small {
+    font-size: 26px;
+  }
+}
 @media (max-width: 640px) {
   .convtwo {
     grid-template-columns: 1fr;
+  }
+  .tile .value {
+    font-size: 18px;
+  }
+  .tile .value.small {
+    font-size: 15px;
+  }
+  .hero .value {
+    font-size: 28px;
+  }
+  .hero .value.small {
+    font-size: 22px;
   }
 }
 .convnote {

@@ -9,10 +9,12 @@ import { useTranslation } from 'react-i18next'
 import { countryName, dayLabel, intNum, money } from '../../dashboard/format'
 
 function Tile({ label, value, aux, pending }) {
+  // 长金额自动缩字号（仅取字符串长度，不做任何金额运算）
+  const long = String(value ?? '').length >= 9
   return (
     <div className={`card tile${pending ? ' pending' : ''}`}>
       <div className="label">{label}</div>
-      <div className="value">{value}</div>
+      <div className={`value${long ? ' small' : ''}`}>{value}</div>
       {aux ? <div className="aux">{aux}</div> : null}
     </div>
   )
@@ -39,7 +41,9 @@ export default function KpiSection({ kpis, fmt, range }) {
     <section className="kpis">
       <div className="card tile hero">
         <div className="label">{t('dashboard.kpiTotal')}</div>
-        <div className="value">{money(fmt, kpis.total_revenue)}</div>
+        <div className={`value${String(money(fmt, kpis.total_revenue)).length >= 10 ? ' small' : ''}`}>
+          {money(fmt, kpis.total_revenue)}
+        </div>
         <div className="aux">{heroAux}</div>
       </div>
       <Tile

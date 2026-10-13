@@ -79,6 +79,7 @@ class SmtpEmailSender(EmailSender):
         password: str,
         from_addr: str,
         use_tls: bool,
+        ssl: bool = False,
     ) -> None:
         self._host = host
         self._port = port
@@ -86,6 +87,7 @@ class SmtpEmailSender(EmailSender):
         self._password = password
         self._from_addr = from_addr or username
         self._use_tls = use_tls
+        self._ssl = ssl  # True=隐式 SSL(465)，False=STARTTLS(587)
 
     async def send_code(self, to: str, code: str, *, purpose: CodePurpose) -> None:
         settings = get_settings()
@@ -96,10 +98,12 @@ class SmtpEmailSender(EmailSender):
             ttl_minutes=settings.code_ttl_minutes,
             from_addr=self._from_addr,
         )
-        smtp = aiosmtplib.SMTP(hostname=self._host, port=self._port, timeout=30)
+        smtp = aiosmtplib.SMTP(
+            hostname=self._host, port=self._port, timeout=30, use_tls=self._ssl
+        )
         try:
             await smtp.connect()
-            if self._use_tls:
+            if self._use_tls and not self._ssl:
                 await smtp.starttls()
             if self._username:
                 await smtp.login(self._username, self._password)
@@ -152,6 +156,7 @@ def create_email_sender(settings: Settings | None = None) -> EmailSender:
             password=settings.smtp_password,
             from_addr=settings.smtp_from,
             use_tls=settings.smtp_use_tls,
+            ssl=settings.smtp_ssl,
         )
     if not settings.is_production:
         return LogEmailSender()

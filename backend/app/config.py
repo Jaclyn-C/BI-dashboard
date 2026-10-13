@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from: str = ""
     smtp_use_tls: bool = True
+    smtp_ssl: bool = False  # True = 隐式 SSL（465 端口，如 163/QQ 邮箱）；False = STARTTLS（587）
 
     # ===== 验证码（Q2/Q3/Q4 默认值）=====
     code_ttl_minutes: int = 10

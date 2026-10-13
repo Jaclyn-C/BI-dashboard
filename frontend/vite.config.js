@@ -11,5 +11,7 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    // 允许 Cloudflare 快速隧道域名访问（临时演示用；生产构建不走 dev server，无此配置）
+    allowedHosts: ['.trycloudflare.com'],
   },
 })

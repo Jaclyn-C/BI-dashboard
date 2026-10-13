@@ -2,6 +2,47 @@
 
 合作伙伴收益数据平台：上游 netshort CPS 取数落库 → 内部看板（React + FastAPI）→ 处理 → 下游供应商 API（规划中）。
 
+## 新机器首次搭建（拉代码后从这里开始）
+
+**前置：装好这三样**（都没有就先装）：
+
+| 依赖 | 版本要求 | 安装方式 |
+|---|---|---|
+| Docker Desktop | 任意近期版 | https://www.docker.com/products/docker-desktop （数据库跑在里面） |
+| Python | ≥ 3.12 | https://www.python.com （mac 自带的版本旧，建议 brew install python@3.12） |
+| Node.js + pnpm | Node ≥ 18 | https://nodejs.com ；pnpm：`npm install -g pnpm` |
+
+**五步初始化**（每个新克隆的机器执行一次）：
+
+```bash
+# 1. 克隆
+git clone https://github.com/Jaclyn-C/BI-dashboard.git partner-dashboard
+cd partner-dashboard
+
+# 2. 后端：建虚拟环境 + 装依赖（读 pyproject.toml，无需手动装任何包）
+cd backend
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev]"     # 只运行不开发可去掉 [dev]
+cd ..
+
+# 3. 前端：装依赖（读 package.json）
+cd frontend && pnpm install && cd ..
+
+# 4. 配置：复制模板并填关键项（此文件不进 git）
+cp .env.example backend/.env
+#    编辑 backend/.env：
+#    - SECRET_KEY：跑 python3 -c "import secrets; print(secrets.token_urlsafe(32))" 生成填入
+#    - UPSTREAM_CLIENT_ID/SECRET：上游凭据（没有则数据同步不启动，页面仍可看）
+
+# 5. 建表：起数据库并执行迁移（生成 users 等表结构）
+docker compose -f compose.dev.yaml up -d
+cd backend && .venv/bin/alembic upgrade head && cd ..
+```
+
+> 项目**不需要任何 Docker 镜像推送**：唯一用到的镜像是官方公共镜像 `postgres:16`，第 5 步会自动拉取。应用本身从源码运行（Python venv + pnpm），不在容器里。
+
+完成后再按下面「快速启动」起服务。新库是空的——填了上游凭据的话，后端启动后自动回填最近 92 天数据（2~5 分钟）。
+
 ## 快速启动（本地开发）
 
 三个终端按顺序启动：数据库 → 后端 → 前端。

@@ -5,7 +5,6 @@
    登录相关（.scrim/.logincard 等）归 auth.css，此处不含。
    新增（参考实现没有的架构态）：
      .infodot（KPI 卡「?」帮助点，悬停/聚焦出公式 tip）、
-     .tile.wide .duo（计入/剔除合并卡双列）、
      .statusline .note（dataIncompleteNote 常驻注记）、
      .appbar 窄屏换行（AC-R1 375px 无遮挡）。
    ============================================================ */
@@ -209,16 +208,9 @@
   gap: 12px;
   margin-bottom: 16px;
 }
-/* 合并卡跨两列：双列金额（如 $25,342.67）需要足够横向空间 */
-.tile.wide {
-  grid-column: span 2;
-}
 @media (max-width: 900px) {
   .kpis {
     grid-template-columns: 1fr 1fr;
-  }
-  .tile.wide {
-    grid-column: 1 / -1;
   }
 }
 .tile {
@@ -300,35 +292,6 @@
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
-}
-
-/* 计入/剔除合并卡（双列） */
-.tile.wide .duo {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 8px;
-}
-.duo-col {
-  min-width: 0;
-}
-.duo-label {
-  font-size: 11.5px;
-  color: var(--muted);
-}
-.duo-count {
-  font-size: 13px;
-  color: var(--ink2);
-  margin-top: 4px;
-}
-.duo-amount {
-  font-size: 18px;
-  font-weight: 500;
-  margin-top: 2px;
-  white-space: nowrap;
-}
-.duo-amount.small {
-  font-size: 15px;
 }
 
 /* ---------- chart cards ---------- */

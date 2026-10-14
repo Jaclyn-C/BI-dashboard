@@ -24,19 +24,16 @@ function HelpDot({ help }) {
   )
 }
 
-function Tile({ label, value, aux, help, wide, children }) {
+function Tile({ label, value, aux, help }) {
   // 长金额自动缩字号（仅取字符串长度，不做任何金额运算）
   const long = String(value ?? '').length >= 9
   return (
-    <div className={`card tile${wide ? ' wide' : ''}`}>
+    <div className="card tile">
       <div className="label-row">
         <div className="label">{label}</div>
         {help ? <HelpDot help={help} /> : null}
       </div>
-      {value !== undefined ? (
-        <div className={`value${long ? ' small' : ''}`}>{value}</div>
-      ) : null}
-      {children}
+      <div className={`value${long ? ' small' : ''}`}>{value}</div>
       {aux ? <div className="aux">{aux}</div> : null}
     </div>
   )
@@ -113,33 +110,21 @@ export default function KpiSection({ kpis, fmt }) {
         value={money(fmt, kpis.refunded_usd)}
         help="dashboard.kpiRefundedHelp"
       />
-      {kpis.included != null && kpis.excluded != null ? (
+      {kpis.included != null ? (
         <Tile
-          label={t('dashboard.kpiClassCard')}
-          help="dashboard.kpiClassCardHelp"
-          wide
-        >
-          <div className="duo">
-            <div className="duo-col">
-              <div className="duo-label">{t('dashboard.kpiIncludedCol')}</div>
-              <div className="duo-count">
-                {t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.included.count) })}
-              </div>
-              <div className={`duo-amount${String(kpis.included.usd).length >= 10 ? ' small' : ''}`}>
-                {money(fmt, kpis.included.usd)}
-              </div>
-            </div>
-            <div className="duo-col">
-              <div className="duo-label">{t('dashboard.kpiExcludedCol')}</div>
-              <div className="duo-count">
-                {t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.excluded.count) })}
-              </div>
-              <div className={`duo-amount${String(kpis.excluded.usd).length >= 10 ? ' small' : ''}`}>
-                {money(fmt, kpis.excluded.usd)}
-              </div>
-            </div>
-          </div>
-        </Tile>
+          label={t('dashboard.kpiIncludedCard')}
+          value={money(fmt, kpis.included.usd)}
+          aux={t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.included.count) })}
+          help="dashboard.kpiIncludedCardHelp"
+        />
+      ) : null}
+      {kpis.excluded != null ? (
+        <Tile
+          label={t('dashboard.kpiExcludedCard')}
+          value={money(fmt, kpis.excluded.usd)}
+          aux={t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.excluded.count) })}
+          help="dashboard.kpiExcludedCardHelp"
+        />
       ) : null}
       <Tile
         label={t('dashboard.kpiAdRev')}

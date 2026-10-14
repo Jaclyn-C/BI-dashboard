@@ -124,13 +124,13 @@ def test_summary_smoke_new_kpis(client, auth, db_session):
     # 新口径（REQ-20261014-01）：含退款 E(220)；D 缺 usd 不计金额
     # total = 270+1100+144+220 = 1734
     assert k["total_usd"] == "17.34"
-    assert k["my_share_usd"] == "12.14"  # 1734 × 0.7 = 1213.8
+    assert k["my_share_usd"] == "12.138"  # 1734 × 0.7 = 1213.8
     assert k["supplier_payable_usd"] == "8.67"  # × 0.5 = 867
     assert k["supplier_paid_usd"] == "2.07"  # (270+144) × 0.5 = 207
     assert k["hidden_saving_usd"] == "6.60"  # 867 − 207 = 660
     assert k["refunded_usd"] == "2.20"
     # 总实际净利润 = 实际净利(1213.8−207=1006.8) + 广告 17144 = 18150.8
-    assert k["total_net_actual_usd"] == "181.51"
+    assert k["total_net_actual_usd"] == "181.508"
     assert (k["included"]["count"], k["included"]["usd"]) == (2, "4.14")
     assert (k["excluded"]["count"], k["excluded"]["usd"]) == (3, "13.20")
     assert k["orders_total"] == 5 and k["orders_returned"] == 1

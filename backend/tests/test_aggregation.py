@@ -90,17 +90,17 @@ def test_golden_fixture_new_kpis(db_session):
     assert k.total_usd == "36.87"
     assert k.no_usd_order_count == 1
     # 分成 = 3687 × 0.7 = 2580.9
-    assert k.my_share_usd == "25.81"
+    assert k.my_share_usd == "25.809"
     # 应付理论 = 3687 × 0.5 = 1843.5；实付 = 2223 × 0.5 = 1111.5
-    assert k.supplier_payable_usd == "18.44"
-    assert k.supplier_paid_usd == "11.12"
+    assert k.supplier_payable_usd == "18.435"
+    assert k.supplier_paid_usd == "11.115"
     # 差值 = 1843.5 − 1111.5 = 732
     assert k.hidden_saving_usd == "7.32"
     # 应得净利 = 2580.9 − 1843.5 = 737.4；实际净利 = 2580.9 − 1111.5 = 1469.4
-    assert k.net_expected_usd == "7.37"
-    assert k.net_actual_usd == "14.69"
+    assert k.net_expected_usd == "7.374"
+    assert k.net_actual_usd == "14.694"
     # 总实际净利润 = 1469.4 + 17644（广告） = 19113.4
-    assert k.total_net_actual_usd == "191.13"
+    assert k.total_net_actual_usd == "191.134"
     # 已退款总额 = 220（退款单照常参与全部统计）
     assert k.refunded_usd == "2.20"
     # 合并卡：included 3 笔 2223；excluded 4 笔 1464（O5 无 usd 只计数）
@@ -196,10 +196,10 @@ def test_dataset_included_scopes_rows_and_cards(db_session):
     # 行集 = O1/O3/O6：total = 270+1500+453 = 2223
     assert (k.orders_total, k.orders_completed, k.orders_returned) == (3, 3, 0)
     assert k.total_usd == "22.23"
-    assert k.my_share_usd == "15.56"  # 2223 × 0.7 = 1556.1
-    assert k.supplier_paid_usd == "11.12"  # 2223 × 0.5 = 1111.5
-    assert k.net_actual_usd == "4.45"  # 1556.1 − 1111.5 = 444.6
-    assert k.total_net_actual_usd == "180.89"  # 444.6 + 17644 = 18088.6
+    assert k.my_share_usd == "15.561"  # 2223 × 0.7 = 1556.1
+    assert k.supplier_paid_usd == "11.115"  # 2223 × 0.5 = 1111.5
+    assert k.net_actual_usd == "4.446"  # 1556.1 − 1111.5 = 444.6
+    assert k.total_net_actual_usd == "180.886"  # 444.6 + 17644 = 18088.6
     assert k.refunded_usd == "0.00"
     assert k.no_usd_order_count == 0
     # 不适用卡片
@@ -225,7 +225,7 @@ def test_dataset_excluded_scopes_rows_and_cards(db_session):
     # 行集 = O2/O4/O5/O7：total = 1100+144+220 = 1464（O5 缺 usd）
     assert (k.orders_total, k.orders_completed, k.orders_returned) == (4, 3, 1)
     assert k.total_usd == "14.64"
-    assert k.my_share_usd == "10.25"  # 1464 × 0.7 = 1024.8
+    assert k.my_share_usd == "10.248"  # 1464 × 0.7 = 1024.8
     assert k.refunded_usd == "2.20"  # O7
     assert k.no_usd_order_count == 1  # O5
     for none_card in (

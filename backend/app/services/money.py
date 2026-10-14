@@ -30,3 +30,20 @@ def minor_to_major(value: Decimal) -> Decimal:
 def money_str(value: Decimal) -> str:
     """minor units Decimal → 主单位两位小数字符串（API 输出统一出口）。"""
     return str(quantize_2(minor_to_major(value)))
+
+
+def money_exact(value: Decimal) -> str:
+    """minor units Decimal → 主单位**真值**字符串（不四舍五入，REQ-20261014-01）。
+
+    用于分成类卡片：×70%/×50% 会产生「分」以下尾数，取整会破坏卡片间
+    显示值可互算性（总净利 = 实际净利 + 广告 要求逐位对上）。输出去掉
+    尾随零、保留至少两位小数（如 25.809 / 15549.1635 / 36.87 / 0.00）。
+    """
+    major = Decimal(value) / _CENTS
+    text = format(major.normalize(), "f")
+    if "." not in text:
+        return f"{text}.00"
+    head, _, tail = text.partition(".")
+    if len(tail) < 2:
+        return f"{head}.{tail.ljust(2, '0')}"
+    return text

@@ -45,7 +45,7 @@ from app.schemas.dashboard import (
 )
 from app.services import share_service, sync_service
 from app.services.fx_legacy import legacy_usd_rate
-from app.services.money import money_str, quantize_1
+from app.services.money import money_exact, money_str, quantize_1
 
 #: 未知国家哨兵（订单行 country_key 与 summary 国家条目同一枚值，m12）
 UNKNOWN_COUNTRY_KEY = "__unknown"
@@ -442,31 +442,31 @@ def build_summary(
     if order_class == "all":
         payable_minor = share_service.supplier_payable_theoretical(total_usd_minor)
         paid_minor = share_service.supplier_paid_actual(included_usd_minor)
-        kpi_payable = money_str(payable_minor)
-        kpi_paid = money_str(paid_minor)
-        kpi_hidden = money_str(share_service.hidden_saving(payable_minor, paid_minor))
-        kpi_net_expected = money_str(share_service.net_expected(my_share_minor, payable_minor))
+        kpi_payable = money_exact(payable_minor)
+        kpi_paid = money_exact(paid_minor)
+        kpi_hidden = money_exact(share_service.hidden_saving(payable_minor, paid_minor))
+        kpi_net_expected = money_exact(share_service.net_expected(my_share_minor, payable_minor))
         net_actual_minor = share_service.net_actual(my_share_minor, paid_minor)
-        kpi_net_actual = money_str(net_actual_minor)
-        kpi_total_net_actual = money_str(
+        kpi_net_actual = money_exact(net_actual_minor)
+        kpi_total_net_actual = money_exact(
             share_service.total_net_actual(net_actual_minor, ad_total_minor)
         )
         kpi_included = ClassCountAmount(
-            count=included_count, usd=money_str(included_usd_minor)
+            count=included_count, usd=money_exact(included_usd_minor)
         )
         kpi_excluded = ClassCountAmount(
-            count=excluded_count, usd=money_str(excluded_usd_minor)
+            count=excluded_count, usd=money_exact(excluded_usd_minor)
         )
     elif order_class == "included":
         # 视图内全部为已计入：实付 = 视图总额 × 50%；应付理论/差值/应得/合并卡不适用
         paid_minor = share_service.supplier_paid_actual(total_usd_minor)
         kpi_payable = None
-        kpi_paid = money_str(paid_minor)
+        kpi_paid = money_exact(paid_minor)
         kpi_hidden = None
         kpi_net_expected = None
         net_actual_minor = share_service.net_actual(my_share_minor, paid_minor)
-        kpi_net_actual = money_str(net_actual_minor)
-        kpi_total_net_actual = money_str(
+        kpi_net_actual = money_exact(net_actual_minor)
+        kpi_total_net_actual = money_exact(
             share_service.total_net_actual(net_actual_minor, ad_total_minor)
         )
         kpi_included = None
@@ -497,18 +497,18 @@ def build_summary(
             orders_total=orders_total,
             orders_completed=orders_completed,
             orders_returned=orders_returned,
-            total_usd=money_str(total_usd_minor),
-            my_share_usd=money_str(my_share_minor),
+            total_usd=money_exact(total_usd_minor),
+            my_share_usd=money_exact(my_share_minor),
             supplier_payable_usd=kpi_payable,
             supplier_paid_usd=kpi_paid,
             hidden_saving_usd=kpi_hidden,
             net_expected_usd=kpi_net_expected,
             net_actual_usd=kpi_net_actual,
             total_net_actual_usd=kpi_total_net_actual,
-            refunded_usd=money_str(refunded_usd_minor),
+            refunded_usd=money_exact(refunded_usd_minor),
             included=kpi_included,
             excluded=kpi_excluded,
-            ad_total=money_str(ad_total_minor),
+            ad_total=money_exact(ad_total_minor),
             ad_days_reported=len(ad_rows),
             countries=len(countries),
             top_country=table_rows[0].key if table_rows else None,

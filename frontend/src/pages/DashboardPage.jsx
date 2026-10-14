@@ -53,8 +53,9 @@ export default function DashboardPage() {
   const locale = i18n.language === 'zh' ? 'zh-CN' : 'en-US'
   const fmt = useMemo(() => buildFormatters(locale), [locale])
 
-  // 数据集是外层范围；表格类别筛选在其内细化（all = 跟随数据集，REQ-20261014-01）
-  const effectiveClass = filters.klass !== 'all' ? filters.klass : dataset
+  // 数据集锁死外层范围：dataset ≠ all 时表格类别筛选锁定为该数据集（禁用），
+  // 仅 dataset = all 时可自由筛选（REQ-20261014-01，用户定稿语义）
+  const effectiveClass = dataset !== 'all' ? dataset : filters.klass
 
   // ---- 数据（S8 hooks；loading 期间保留上一帧 → loadingdim）----
   const summary = useSummary(range, dataset)
@@ -105,6 +106,7 @@ export default function DashboardPage() {
 
   const handleDataset = useCallback((ds) => {
     setDataset(ds)
+    setFilters((f) => ({ ...f, klass: 'all' })) // 数据集切换时重置表格类别筛选
     setPage(1)
   }, [])
 
@@ -271,6 +273,8 @@ export default function DashboardPage() {
                   data={orders.data}
                   fmt={fmt}
                   filters={filters}
+                  classValue={dataset === 'all' ? filters.klass : dataset}
+                  classLocked={dataset !== 'all'}
                   sort={sort}
                   page={page}
                   onFilterChange={handleFilterChange}

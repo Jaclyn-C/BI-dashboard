@@ -20,11 +20,12 @@ const classLabel = (t, value) => {
 /**
  * @param {{data: object|null, fmt: object,
  *          filters: {klass: string, currency: string, status: string},
+ *          classValue: string, classLocked: boolean,
  *          sort: {key: string, dir: string}, page: number,
  *          onFilterChange: (patch: object) => void,
  *          onSort: (key: string) => void, onPageChange: (page: number) => void}} props
  */
-export default function OrdersCard({ data, fmt, filters, sort, page, onFilterChange, onSort, onPageChange }) {
+export default function OrdersCard({ data, fmt, filters, classValue, classLocked, sort, page, onFilterChange, onSort, onPageChange }) {
   const { t } = useTranslation()
   const unknownLabel = t('dashboard.unknownCountry')
 
@@ -119,7 +120,8 @@ export default function OrdersCard({ data, fmt, filters, sort, page, onFilterCha
           <select
             className="field"
             id="typeFilter"
-            value={filters.klass}
+            value={classValue}
+            disabled={classLocked}
             onChange={(e) => onFilterChange({ klass: e.target.value })}
           >
             <option value="all">{t('dashboard.fAllClasses')}</option>

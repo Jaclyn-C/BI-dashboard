@@ -23,6 +23,12 @@ export function buildFormatters(locale) {
   return {
     locale,
     usd: new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD' }),
+    usdExact: new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    }),
     usdWhole: new Intl.NumberFormat(locale, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }),
     native: new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
     int: new Intl.NumberFormat(locale),
@@ -40,6 +46,14 @@ export function buildFormatters(locale) {
 /** 后端金额字符串（主单位 2 位小数）→ 货币展示（渲染，非运算） */
 export function money(fmt, amountString) {
   return fmt.usd.format(Number(amountString))
+}
+
+/**
+ * 后端真值金额字符串（最多 4 位小数，REQ-20261014-01 分成类卡片）→ 货币展示。
+ * 不做任何舍入：后端已给真值（如 15549.1635），Intl 仅分组千分位。
+ */
+export function moneyExact(fmt, amountString) {
+  return fmt.usdExact.format(Number(amountString))
 }
 
 /** 整美元展示（国家条行尾，HTML usdWhole） */

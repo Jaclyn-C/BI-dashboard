@@ -9,7 +9,7 @@
 
 import { useTranslation } from 'react-i18next'
 
-import { countryName, intNum, money } from '../../dashboard/format'
+import { countryName, intNum, moneyExact } from '../../dashboard/format'
 
 function HelpDot({ help }) {
   const { t } = useTranslation()
@@ -74,13 +74,13 @@ export default function KpiSection({ kpis, fmt }) {
         />
         <Tile
           label={t('dashboard.kpiTotalAmount')}
-          value={money(fmt, kpis.total_usd)}
+          value={moneyExact(fmt, kpis.total_usd)}
           help="dashboard.kpiTotalAmountHelp"
         />
         {kpis.included != null ? (
           <Tile
             label={t('dashboard.kpiIncludedCard')}
-            value={money(fmt, kpis.included.usd)}
+            value={moneyExact(fmt, kpis.included.usd)}
             aux={t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.included.count) })}
             help="dashboard.kpiIncludedCardHelp"
           />
@@ -88,7 +88,7 @@ export default function KpiSection({ kpis, fmt }) {
         {kpis.excluded != null ? (
           <Tile
             label={t('dashboard.kpiExcludedCard')}
-            value={money(fmt, kpis.excluded.usd)}
+            value={moneyExact(fmt, kpis.excluded.usd)}
             aux={t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.excluded.count) })}
             help="dashboard.kpiExcludedCardHelp"
           />
@@ -109,27 +109,27 @@ export default function KpiSection({ kpis, fmt }) {
       <KpiGroup title={t('dashboard.kpiGroupShare')}>
         <Tile
           label={t('dashboard.kpiMyShare')}
-          value={money(fmt, kpis.my_share_usd)}
+          value={moneyExact(fmt, kpis.my_share_usd)}
           help="dashboard.kpiMyShareHelp"
         />
         {kpis.supplier_payable_usd != null ? (
           <Tile
             label={t('dashboard.kpiPayable')}
-            value={money(fmt, kpis.supplier_payable_usd)}
+            value={moneyExact(fmt, kpis.supplier_payable_usd)}
             help="dashboard.kpiPayableHelp"
           />
         ) : null}
         {kpis.supplier_paid_usd != null ? (
           <Tile
             label={t('dashboard.kpiPaid')}
-            value={money(fmt, kpis.supplier_paid_usd)}
+            value={moneyExact(fmt, kpis.supplier_paid_usd)}
             help="dashboard.kpiPaidHelp"
           />
         ) : null}
         {kpis.hidden_saving_usd != null ? (
           <Tile
             label={t('dashboard.kpiHidden')}
-            value={money(fmt, kpis.hidden_saving_usd)}
+            value={moneyExact(fmt, kpis.hidden_saving_usd)}
             help="dashboard.kpiHiddenHelp"
           />
         ) : null}
@@ -139,32 +139,32 @@ export default function KpiSection({ kpis, fmt }) {
         {kpis.total_net_actual_usd != null ? (
           <Tile
             label={t('dashboard.kpiTotalNetActual')}
-            value={money(fmt, kpis.total_net_actual_usd)}
+            value={moneyExact(fmt, kpis.total_net_actual_usd)}
             help="dashboard.kpiTotalNetActualHelp"
           />
         ) : null}
         {kpis.net_actual_usd != null ? (
           <Tile
             label={t('dashboard.kpiNetActual')}
-            value={money(fmt, kpis.net_actual_usd)}
+            value={moneyExact(fmt, kpis.net_actual_usd)}
             help="dashboard.kpiNetActualHelp"
           />
         ) : null}
         {kpis.net_expected_usd != null ? (
           <Tile
             label={t('dashboard.kpiNetExpected')}
-            value={money(fmt, kpis.net_expected_usd)}
+            value={moneyExact(fmt, kpis.net_expected_usd)}
             help="dashboard.kpiNetExpectedHelp"
           />
         ) : null}
         <Tile
           label={t('dashboard.kpiRefunded')}
-          value={money(fmt, kpis.refunded_usd)}
+          value={moneyExact(fmt, kpis.refunded_usd)}
           help="dashboard.kpiRefundedHelp"
         />
         <Tile
           label={t('dashboard.kpiAdRev')}
-          value={money(fmt, kpis.ad_total)}
+          value={moneyExact(fmt, kpis.ad_total)}
           aux={t('dashboard.kpiAdRevAux', { n: intNum(fmt, kpis.ad_days_reported) })}
           help="dashboard.kpiAdRevHelp"
         />

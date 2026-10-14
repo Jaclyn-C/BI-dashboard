@@ -57,6 +57,11 @@ const LANGUAGES = [
 const pad = (n) => String(n).padStart(2, '0')
 const keyOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 const round2 = (v) => (Math.round(v * 100) / 100).toFixed(2)
+const exact4 = (v) => {
+  let s = v.toFixed(4).replace(/0+$/, '').replace(/\.$/, '')
+  const [h, d = ''] = s.split('.')
+  return d.length < 2 ? `${h}.${d.padEnd(2, '0')}` : s
+}
 const iso = (d) => new Date(d).toISOString()
 
 function addDaysKey(key, n) {
@@ -502,18 +507,18 @@ export function getSummaryMock({ from, to, klass = 'all' }) {
       orders_total: all.length,
       orders_completed: completed.length,
       orders_returned: returned.length,
-      total_usd: round2(totalUsd),
-      my_share_usd: round2(myShare),
-      supplier_payable_usd: isAll ? round2(payable) : null,
-      supplier_paid_usd: klass === 'excluded' ? null : round2(paidActual),
-      hidden_saving_usd: isAll ? round2(payable - paidActual) : null,
-      net_expected_usd: isAll ? round2(myShare - payable) : null,
-      net_actual_usd: klass === 'excluded' ? null : round2(myShare - paidActual),
-      total_net_actual_usd: klass === 'excluded' ? null : round2(myShare - paidActual + adTotal),
-      refunded_usd: round2(refundedUsd),
+      total_usd: exact4(totalUsd),
+      my_share_usd: exact4(myShare),
+      supplier_payable_usd: isAll ? exact4(payable) : null,
+      supplier_paid_usd: klass === 'excluded' ? null : exact4(paidActual),
+      hidden_saving_usd: isAll ? exact4(payable - paidActual) : null,
+      net_expected_usd: isAll ? exact4(myShare - payable) : null,
+      net_actual_usd: klass === 'excluded' ? null : exact4(myShare - paidActual),
+      total_net_actual_usd: klass === 'excluded' ? null : exact4(myShare - paidActual + adTotal),
+      refunded_usd: exact4(refundedUsd),
       included: mergedCard.included,
       excluded: mergedCard.excluded,
-      ad_total: round2(adTotal),
+      ad_total: exact4(adTotal),
       ad_days_reported: adDays,
       countries: countries.size,
       top_country: countryTable.length ? countryTable[0].key : null,

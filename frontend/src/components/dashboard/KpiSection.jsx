@@ -1,7 +1,8 @@
 // ============================================================
 // KpiSection.jsx — KPI 卡组（REQ-20261014-01 口径，替代 AC-K1–K8 旧七卡）
-// 11 张金额/计数卡 + 国家数；每张卡右上角灰色「?」，悬停/聚焦显示含义与
-// 计算公式（i18n kpiXxxHelp，文案取自需求 §五的「? 文案」）。
+// 方案一分组布局（用户定稿 2026-10-14）：三段式——订单规模 / 分成与结算 /
+// 利润与收益，每段灰色小标题 + 细分隔线，从上到下即业务叙事。
+// 每张卡右上角灰色「?」悬停/聚焦显示含义与计算公式（i18n kpiXxxHelp）。
 // 数据集切换：不适用卡片的值由后端置 null → 本组件直接不渲染（前端零
 // 口径判断）。金额全部来自后端字符串（零金额运算，约束 3）。
 // ============================================================
@@ -21,6 +22,16 @@ function HelpDot({ help }) {
         {t(help)}
       </span>
     </span>
+  )
+}
+
+/** 一组卡片：小标题（带拖尾细线）+ 一行卡片。 */
+function KpiGroup({ title, children }) {
+  return (
+    <div className="kpi-group">
+      <div className="kpi-group-label">{title}</div>
+      <div className="kpi-row">{children}</div>
+    </div>
   )
 }
 
@@ -54,95 +65,103 @@ export default function KpiSection({ kpis, fmt }) {
 
   return (
     <section className="kpis">
-      <Tile
-        label={t('dashboard.kpiOrdersTotal')}
-        value={intNum(fmt, kpis.orders_total)}
-        aux={ordersAux}
-        help="dashboard.kpiOrdersTotalHelp"
-      />
-      <Tile
-        label={t('dashboard.kpiTotalAmount')}
-        value={money(fmt, kpis.total_usd)}
-        help="dashboard.kpiTotalAmountHelp"
-      />
-      <Tile
-        label={t('dashboard.kpiMyShare')}
-        value={money(fmt, kpis.my_share_usd)}
-        help="dashboard.kpiMyShareHelp"
-      />
-      {kpis.supplier_payable_usd != null ? (
+      <KpiGroup title={t('dashboard.kpiGroupScale')}>
         <Tile
-          label={t('dashboard.kpiPayable')}
-          value={money(fmt, kpis.supplier_payable_usd)}
-          help="dashboard.kpiPayableHelp"
+          label={t('dashboard.kpiOrdersTotal')}
+          value={intNum(fmt, kpis.orders_total)}
+          aux={ordersAux}
+          help="dashboard.kpiOrdersTotalHelp"
         />
-      ) : null}
-      {kpis.supplier_paid_usd != null ? (
         <Tile
-          label={t('dashboard.kpiPaid')}
-          value={money(fmt, kpis.supplier_paid_usd)}
-          help="dashboard.kpiPaidHelp"
+          label={t('dashboard.kpiTotalAmount')}
+          value={money(fmt, kpis.total_usd)}
+          help="dashboard.kpiTotalAmountHelp"
         />
-      ) : null}
-      {kpis.hidden_saving_usd != null ? (
+        {kpis.included != null ? (
+          <Tile
+            label={t('dashboard.kpiIncludedCard')}
+            value={money(fmt, kpis.included.usd)}
+            aux={t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.included.count) })}
+            help="dashboard.kpiIncludedCardHelp"
+          />
+        ) : null}
+        {kpis.excluded != null ? (
+          <Tile
+            label={t('dashboard.kpiExcludedCard')}
+            value={money(fmt, kpis.excluded.usd)}
+            aux={t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.excluded.count) })}
+            help="dashboard.kpiExcludedCardHelp"
+          />
+        ) : null}
         <Tile
-          label={t('dashboard.kpiHidden')}
-          value={money(fmt, kpis.hidden_saving_usd)}
-          help="dashboard.kpiHiddenHelp"
+          label={t('dashboard.kpiCountries')}
+          value={intNum(fmt, kpis.countries)}
+          aux={
+            kpis.top_country
+              ? t('dashboard.topCountry', {
+                  n: countryName(kpis.top_country, fmt, t('dashboard.unknownCountry')),
+                })
+              : ''
+          }
         />
-      ) : null}
-      {kpis.net_expected_usd != null ? (
+      </KpiGroup>
+
+      <KpiGroup title={t('dashboard.kpiGroupShare')}>
         <Tile
-          label={t('dashboard.kpiNetExpected')}
-          value={money(fmt, kpis.net_expected_usd)}
-          help="dashboard.kpiNetExpectedHelp"
+          label={t('dashboard.kpiMyShare')}
+          value={money(fmt, kpis.my_share_usd)}
+          help="dashboard.kpiMyShareHelp"
         />
-      ) : null}
-      {kpis.net_actual_usd != null ? (
+        {kpis.supplier_payable_usd != null ? (
+          <Tile
+            label={t('dashboard.kpiPayable')}
+            value={money(fmt, kpis.supplier_payable_usd)}
+            help="dashboard.kpiPayableHelp"
+          />
+        ) : null}
+        {kpis.supplier_paid_usd != null ? (
+          <Tile
+            label={t('dashboard.kpiPaid')}
+            value={money(fmt, kpis.supplier_paid_usd)}
+            help="dashboard.kpiPaidHelp"
+          />
+        ) : null}
+        {kpis.hidden_saving_usd != null ? (
+          <Tile
+            label={t('dashboard.kpiHidden')}
+            value={money(fmt, kpis.hidden_saving_usd)}
+            help="dashboard.kpiHiddenHelp"
+          />
+        ) : null}
+      </KpiGroup>
+
+      <KpiGroup title={t('dashboard.kpiGroupProfit')}>
+        {kpis.net_expected_usd != null ? (
+          <Tile
+            label={t('dashboard.kpiNetExpected')}
+            value={money(fmt, kpis.net_expected_usd)}
+            help="dashboard.kpiNetExpectedHelp"
+          />
+        ) : null}
+        {kpis.net_actual_usd != null ? (
+          <Tile
+            label={t('dashboard.kpiNetActual')}
+            value={money(fmt, kpis.net_actual_usd)}
+            help="dashboard.kpiNetActualHelp"
+          />
+        ) : null}
         <Tile
-          label={t('dashboard.kpiNetActual')}
-          value={money(fmt, kpis.net_actual_usd)}
-          help="dashboard.kpiNetActualHelp"
+          label={t('dashboard.kpiRefunded')}
+          value={money(fmt, kpis.refunded_usd)}
+          help="dashboard.kpiRefundedHelp"
         />
-      ) : null}
-      <Tile
-        label={t('dashboard.kpiRefunded')}
-        value={money(fmt, kpis.refunded_usd)}
-        help="dashboard.kpiRefundedHelp"
-      />
-      {kpis.included != null ? (
         <Tile
-          label={t('dashboard.kpiIncludedCard')}
-          value={money(fmt, kpis.included.usd)}
-          aux={t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.included.count) })}
-          help="dashboard.kpiIncludedCardHelp"
+          label={t('dashboard.kpiAdRev')}
+          value={money(fmt, kpis.ad_total)}
+          aux={t('dashboard.kpiAdRevAux', { n: intNum(fmt, kpis.ad_days_reported) })}
+          help="dashboard.kpiAdRevHelp"
         />
-      ) : null}
-      {kpis.excluded != null ? (
-        <Tile
-          label={t('dashboard.kpiExcludedCard')}
-          value={money(fmt, kpis.excluded.usd)}
-          aux={t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.excluded.count) })}
-          help="dashboard.kpiExcludedCardHelp"
-        />
-      ) : null}
-      <Tile
-        label={t('dashboard.kpiAdRev')}
-        value={money(fmt, kpis.ad_total)}
-        aux={t('dashboard.kpiAdRevAux', { n: intNum(fmt, kpis.ad_days_reported) })}
-        help="dashboard.kpiAdRevHelp"
-      />
-      <Tile
-        label={t('dashboard.kpiCountries')}
-        value={intNum(fmt, kpis.countries)}
-        aux={
-          kpis.top_country
-            ? t('dashboard.topCountry', {
-                n: countryName(kpis.top_country, fmt, t('dashboard.unknownCountry')),
-              })
-            : ''
-        }
-      />
+      </KpiGroup>
     </section>
   )
 }

@@ -202,14 +202,35 @@
   box-shadow: var(--shadow);
   padding: 20px;
 }
+/* KPI 三段式分组（方案一，REQ-20261014-01 用户定稿）：订单规模 / 分成与结算 / 利润与收益 */
 .kpis {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.kpi-group-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+  white-space: nowrap;
+}
+.kpi-group-label::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--grid);
+}
+.kpi-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
-  margin-bottom: 16px;
 }
 @media (max-width: 900px) {
-  .kpis {
+  .kpi-row {
     grid-template-columns: 1fr 1fr;
   }
 }

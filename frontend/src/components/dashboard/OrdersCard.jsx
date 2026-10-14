@@ -7,6 +7,7 @@
 // 排序/筛选/翻页状态由 DashboardPage 持有（本组件纯受控）。
 // ============================================================
 
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { countryName, intNum, money, nativeMoney } from '../../dashboard/format'
@@ -27,6 +28,7 @@ const classLabel = (t, value) => {
  */
 export default function OrdersCard({ data, fmt, filters, classValue, classLocked, sort, page, onFilterChange, onSort, onPageChange }) {
   const { t } = useTranslation()
+  const [pageInput, setPageInput] = useState('')
   const unknownLabel = t('dashboard.unknownCountry')
 
   const sortTh = (label, key, numeric) => {
@@ -108,6 +110,16 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
   const first = total ? (safePage - 1) * (data ? data.page_size : 25) + 1 : 0
   const last = total ? Math.min(total, safePage * (data ? data.page_size : 25)) : 0
 
+  // 页码跳转：输入 → 钳制到 [1, pages] → 翻页（无效输入忽略）
+  const jumpToPage = () => {
+    const target = Number.parseInt(pageInput, 10)
+    if (Number.isFinite(target)) {
+      const clamped = Math.min(Math.max(1, target), pages)
+      if (clamped !== safePage) onPageChange(clamped)
+    }
+    setPageInput('')
+  }
+
   return (
     <section className="card">
       <div className="cardhead">
@@ -179,6 +191,26 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
             >
               ‹
             </button>
+            <span className="pager">
+              <input
+                className="pageinput"
+                type="text"
+                inputMode="numeric"
+                aria-label={t('dashboard.pageInputAria')}
+                placeholder={String(safePage)}
+                value={pageInput}
+                onChange={(e) => setPageInput(e.target.value.replace(/[^\d]/g, ''))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') jumpToPage()
+                }}
+              />
+              <span className="pagerof">
+                {t('dashboard.pageIndicator', { n: intNum(fmt, pages) })}
+              </span>
+              <button type="button" className="pagebtn wide" onClick={jumpToPage}>
+                {t('dashboard.pageGo')}
+              </button>
+            </span>
             <button
               type="button"
               className="pagebtn"

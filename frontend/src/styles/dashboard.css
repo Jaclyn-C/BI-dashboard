@@ -652,6 +652,37 @@ th .arrow {
   opacity: 0.35;
   cursor: default;
 }
+/* 分页器：页码输入 + 总页数 + 跳转（REQ-20261014-01 用户反馈） */
+.pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pageinput {
+  width: 52px;
+  text-align: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  padding: 5px 6px;
+}
+.pageinput:focus-visible {
+  outline: none;
+  border-color: var(--series);
+}
+.pagerof {
+  color: var(--muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.pagebtn.wide {
+  width: auto;
+  padding: 0 12px;
+  font-size: 12.5px;
+}
 
 .visually-hidden {
   position: absolute;

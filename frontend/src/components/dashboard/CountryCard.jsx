@@ -49,14 +49,14 @@ export default function CountryCard({ countries, fmt }) {
         <h2>{t('dashboard.countryTitle')}</h2>
         <span className="sub">{t('dashboard.countrySub')}</span>
       </div>
-      <div className="two">
+      <div className="two countrytwo">
         <CountryBars
           rows={barRows}
           ariaLabel={t('dashboard.countryTitle')}
           usdLabel={t('dashboard.hEstUsd')}
         />
-        <div className="tablewrap">
-          <table>
+        <div className="tablewrap cscroll">
+          <table className="countrytable">
             <thead>
               <tr>
                 <th>{t('dashboard.hCountry')}</th>
@@ -70,9 +70,17 @@ export default function CountryCard({ countries, fmt }) {
                 <tr key={r.key}>
                   <td>{countryName(r.key, fmt, unknownLabel)}</td>
                   <td>
-                    {r.by_currency
-                      .map((bc) => `${bc.currency} ${nativeMoney(fmt, bc.amount)}`)
-                      .join(' · ') || '—'}
+                    {r.by_currency.length ? (
+                      <span className="curlist">
+                        {r.by_currency.map((bc) => (
+                          <span key={bc.currency} className="curln">
+                            {bc.currency} {nativeMoney(fmt, bc.amount)}
+                          </span>
+                        ))}
+                      </span>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                   <td className="num">{money(fmt, r.usd)}</td>
                   <td className="num">{`${r.share}%`}</td>

@@ -661,6 +661,52 @@ th .arrow {
   clip: rect(0 0 0 0);
 }
 
+/* ---------- 国家分布卡（视觉翻新：信息零删减，REQ-20261014-01 用户反馈） ---------- */
+/* 桌面端两栏之间加分隔线；窄屏上下堆叠时改用上分隔线 */
+@media (min-width: 901px) {
+  .countrytwo > .cscroll {
+    border-left: 1px solid var(--border);
+    padding-left: 20px;
+  }
+}
+@media (max-width: 900px) {
+  .countrytwo > .cscroll {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+}
+/* 长列表限高内滚 + 表头吸附（全部行保留，滚动可达） */
+.countrytwo .cscroll {
+  max-height: 480px;
+  overflow-y: auto;
+}
+.countrytable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--surface);
+}
+.countrytable td {
+  vertical-align: top;
+}
+/* 极淡斑马纹 + 行悬停高亮（悬停规则置于斑马纹之后以覆盖偶数行） */
+.countrytable tbody tr:nth-child(even) td {
+  background: var(--series-softer);
+}
+.countrytable tbody tr:hover td {
+  background: var(--series-soft);
+}
+/* 币种拆分：小号灰色逐行堆叠，替代长串拼接 */
+.curlist {
+  display: grid;
+  gap: 2px;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ---------- dataset switch & exports ---------- */
 .dsbar {
   display: flex;

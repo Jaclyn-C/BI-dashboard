@@ -107,6 +107,8 @@
     "kpiNetExpectedHelp": "Theoretical net profit with nothing hidden; equals 20% of all order amounts. Formula: your share (70%) − supplier payable (theoretical)",
     "kpiNetActual": "Actual net profit",
     "kpiNetActualHelp": "What actually lands in your pocket; higher than expected — the difference comes from excluded orders. Formula: your share (70%) − supplier paid",
+    "kpiTotalNetActual": "Total actual net profit",
+    "kpiTotalNetActualHelp": "Your final take: order-side actual net profit plus channel ad revenue. Formula: actual net profit + ad revenue",
     "kpiRefunded": "Refunded total (USD)",
     "kpiRefundedHelp": "Sum of refunded orders' original amounts; refunds still count in every other money metric. Formula: Σ refunded order amounts",
     "kpiIncludedCard": "Included orders",

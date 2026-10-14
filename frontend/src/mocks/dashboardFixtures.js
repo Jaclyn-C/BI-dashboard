@@ -509,6 +509,7 @@ export function getSummaryMock({ from, to, klass = 'all' }) {
       hidden_saving_usd: isAll ? round2(payable - paidActual) : null,
       net_expected_usd: isAll ? round2(myShare - payable) : null,
       net_actual_usd: klass === 'excluded' ? null : round2(myShare - paidActual),
+      total_net_actual_usd: klass === 'excluded' ? null : round2(myShare - paidActual + adTotal),
       refunded_usd: round2(refundedUsd),
       included: mergedCard.included,
       excluded: mergedCard.excluded,

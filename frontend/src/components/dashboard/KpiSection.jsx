@@ -136,11 +136,11 @@ export default function KpiSection({ kpis, fmt }) {
       </KpiGroup>
 
       <KpiGroup title={t('dashboard.kpiGroupProfit')}>
-        {kpis.net_expected_usd != null ? (
+        {kpis.total_net_actual_usd != null ? (
           <Tile
-            label={t('dashboard.kpiNetExpected')}
-            value={money(fmt, kpis.net_expected_usd)}
-            help="dashboard.kpiNetExpectedHelp"
+            label={t('dashboard.kpiTotalNetActual')}
+            value={money(fmt, kpis.total_net_actual_usd)}
+            help="dashboard.kpiTotalNetActualHelp"
           />
         ) : null}
         {kpis.net_actual_usd != null ? (
@@ -148,6 +148,13 @@ export default function KpiSection({ kpis, fmt }) {
             label={t('dashboard.kpiNetActual')}
             value={money(fmt, kpis.net_actual_usd)}
             help="dashboard.kpiNetActualHelp"
+          />
+        ) : null}
+        {kpis.net_expected_usd != null ? (
+          <Tile
+            label={t('dashboard.kpiNetExpected')}
+            value={money(fmt, kpis.net_expected_usd)}
+            help="dashboard.kpiNetExpectedHelp"
           />
         ) : null}
         <Tile

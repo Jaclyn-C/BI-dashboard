@@ -107,6 +107,8 @@
     "kpiNetExpectedHelp": "不隐藏情况下的理论净利润，等于全部订单原金额 × 20%。公式：你的分成（70%） − 供应商应付（理论）",
     "kpiNetActual": "实际净利润",
     "kpiNetActualHelp": "实际到手的净利润，比应得净利润更高，差额来自被剔除的订单。公式：你的分成（70%） − 供应商实付",
+    "kpiTotalNetActual": "总实际净利润",
+    "kpiTotalNetActualHelp": "最终落袋的总收益：订单侧实际净利润加上渠道广告收入。公式：实际净利润 + 广告收入",
     "kpiRefunded": "已退款总金额（美元）",
     "kpiRefundedHelp": "状态为已退款的订单原金额之和，退款订单同样参与其他所有金额统计。公式：Σ 已退款订单原金额",
     "kpiIncludedCard": "已计入订单",

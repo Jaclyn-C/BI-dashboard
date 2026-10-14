@@ -267,11 +267,13 @@
 .infodot .dot:focus-visible {
   color: var(--ink2);
 }
-.infodot .tip {
+/* 注意：类名 helptip 与图表 .tip（Tooltip.jsx 单例，display:none 常态）刻意区分，避免互相覆盖 */
+.infodot .helptip {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
   z-index: 30;
+  display: block;
   width: 240px;
   padding: 10px 12px;
   background: var(--surface);
@@ -289,8 +291,8 @@
   transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s;
   pointer-events: none;
 }
-.infodot:hover .tip,
-.infodot:focus-within .tip {
+.infodot:hover .helptip,
+.infodot:focus-within .helptip {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);

@@ -17,7 +17,7 @@ function HelpDot({ help }) {
       <button type="button" className="dot" aria-label={t('dashboard.kpiHelpAria')}>
         ?
       </button>
-      <span className="tip" role="tooltip">
+      <span className="helptip" role="tooltip">
         {t(help)}
       </span>
     </span>

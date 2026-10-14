@@ -1,14 +1,21 @@
-"""聚合引擎（DESIGN-20261012-02 §4，REQ AC-AG1–AG5、AC-C1–C8、AC-K*；A7）。
+"""聚合引擎（DESIGN-20261012-02 §4；KPI 口径 REQ-20261014-01）。
 
 Python 内存聚合（S4 决策）：一次载入区间订单行 → Decimal 聚合出 summary
 全部口径，与 HTML derive()/convCompareData()/countries map 逐条对照可审计。
-B1 语义替换：分成 → 毛额（gross = Σ usd_order_amount_minor，AC-D3 零分成输出）。
+
+两套金额口径并存（有意为之）：
+- **新口径 KPI 卡（REQ-20261014-01）**：基数 = 上游自报美元，退款单照常参与，
+  缺自报美元不计金额只计数；分成数学走 share_service（70%/50%）。
+- **旧口径每日/对比/国家卡**：复刻参考 HTML 行为——退款单剔除、缺 usd 剔除，
+  保持不变（仅数据范围随数据集 class 参数收窄）。
+
+数据集切换（build_summary 的 order_class 参数）：included/excluded 时行集
+先按 tag 过滤；新口径卡片按「公式输入是否全部落在当前数据集」决定适用性，
+不适用卡片的值为 None（前端不渲染该卡）。
 
 折叠派生全部后端预计算（§4.1）：每日图表序列 = 币种按区间毛额（usd 口径）
 降序前 6 + __other；对比环图 = 前 7 + __other（RQ-3）；国家条 = 前 9 + __other
 （usd/orders/byCurrency 求和合并）。前端零金额求和（AC-U6）。
-
-⚠️ 本模块禁止 import share_service（B1 红线，B-T4/B-T9 grep 断言）。
 """
 
 import re
@@ -20,6 +27,8 @@ from sqlalchemy import select
 from app.models import AdRevenueDaily, Order
 from app.schemas.dashboard import (
     AdEntry,
+    ClassCountAmount,
+    ClassFilter,
     ConvOut,
     ConvRow,
     ConvSlice,
@@ -28,14 +37,13 @@ from app.schemas.dashboard import (
     CurrencyAmount,
     DailyEntry,
     DailyOut,
-    Degraded,
     KpisOut,
     RangeOut,
     SeriesAmount,
     SummaryMeta,
     SummaryResponse,
 )
-from app.services import sync_service
+from app.services import share_service, sync_service
 from app.services.fx_legacy import legacy_usd_rate
 from app.services.money import money_str, quantize_1
 
@@ -108,26 +116,28 @@ def _fold_series(
     return series
 
 
-def build_summary(db, date_from: date, date_to: date) -> SummaryResponse:
-    """聚合区间全口径 summary（DESIGN §5.2 契约）。"""
-    rows = db.execute(
-        select(
-            Order.create_date,
-            Order.currency_type,
-            Order.language,
-            Order.amount_minor,
-            Order.usd_order_amount_minor,
-            Order.is_returned,
-        )
-        .where(Order.create_date >= date_from, Order.create_date <= date_to)
-    ).all()
+def build_summary(
+    db, date_from: date, date_to: date, order_class: ClassFilter = "all"
+) -> SummaryResponse:
+    """聚合区间全口径 summary（DESIGN §5.2 契约；class = 数据集切换）。"""
+    stmt = select(
+        Order.create_date,
+        Order.currency_type,
+        Order.language,
+        Order.amount_minor,
+        Order.usd_order_amount_minor,
+        Order.is_returned,
+        Order.order_class,
+    ).where(Order.create_date >= date_from, Order.create_date <= date_to)
+    if order_class != "all":
+        stmt = stmt.where(Order.order_class == order_class)
+    rows = db.execute(stmt).all()
 
     zero = Decimal("0")
     days = iter_range_days(date_from, date_to)
     day_keys = [day.isoformat() for day in days]
 
     # ---- 主循环（usd 口径，对标 HTML derive 主 pass；退款单不进任何金额聚合 AC-AG2）----
-    gross_usd_minor = zero
     usd_daily: dict[str, dict] = {}
     currency_totals_usd: dict[str, Decimal] = {}
     countries: dict[str, dict] = {}
@@ -138,6 +148,15 @@ def build_summary(db, date_from: date, date_to: date) -> SummaryResponse:
     orders_returned = 0
     orders_total = 0
 
+    # ---- 新口径 KPI 累加器（REQ-20261014-01：含退款单；缺 usd 不计金额只计数）----
+    total_usd_minor = zero
+    included_usd_minor = zero
+    excluded_usd_minor = zero
+    refunded_usd_minor = zero
+    included_count = 0
+    excluded_count = 0
+    no_usd_order_count_all = 0
+
     for (
         create_date,
         currency_type,
@@ -145,8 +164,23 @@ def build_summary(db, date_from: date, date_to: date) -> SummaryResponse:
         amount_minor,
         usd_minor,
         is_returned,
+        row_class,
     ) in rows:
         orders_total += 1
+        if row_class == "included":
+            included_count += 1
+        elif row_class == "excluded":
+            excluded_count += 1
+        if usd_minor is None:
+            no_usd_order_count_all += 1
+        else:
+            total_usd_minor += usd_minor
+            if row_class == "included":
+                included_usd_minor += usd_minor
+            elif row_class == "excluded":
+                excluded_usd_minor += usd_minor
+            if is_returned:
+                refunded_usd_minor += usd_minor
         if is_returned:
             orders_returned += 1
             continue
@@ -178,7 +212,6 @@ def build_summary(db, date_from: date, date_to: date) -> SummaryResponse:
         # ---- usd 口径（缺 usd 的订单不计入，AC-AG3）----
         if usd_minor is None:
             continue
-        gross_usd_minor += usd_minor
         currency_totals_usd[currency] = currency_totals_usd.get(currency, zero) + usd_minor
 
         day_key = create_date.isoformat()
@@ -208,6 +241,7 @@ def build_summary(db, date_from: date, date_to: date) -> SummaryResponse:
         amount_minor,
         _usd_minor,
         is_returned,
+        _row_class,
     ) in rows:
         if is_returned:
             continue
@@ -395,6 +429,48 @@ def build_summary(db, date_from: date, date_to: date) -> SummaryResponse:
     sync_status, latest_sync_at, latest_covered = sync_service.orders_sync_state(db)
     ad_available, ad_error = sync_service.latest_ad_state(db)
 
+    # ---- 新口径 KPI（REQ-20261014-01；公式输入不在当前数据集内的卡片 → None）----
+    my_share_minor = share_service.my_upstream_share(total_usd_minor)
+    kpi_payable: str | None
+    kpi_paid: str | None
+    kpi_hidden: str | None
+    kpi_net_expected: str | None
+    kpi_net_actual: str | None
+    kpi_included: ClassCountAmount | None
+    kpi_excluded: ClassCountAmount | None
+    if order_class == "all":
+        payable_minor = share_service.supplier_payable_theoretical(total_usd_minor)
+        paid_minor = share_service.supplier_paid_actual(included_usd_minor)
+        kpi_payable = money_str(payable_minor)
+        kpi_paid = money_str(paid_minor)
+        kpi_hidden = money_str(share_service.hidden_saving(payable_minor, paid_minor))
+        kpi_net_expected = money_str(share_service.net_expected(my_share_minor, payable_minor))
+        kpi_net_actual = money_str(share_service.net_actual(my_share_minor, paid_minor))
+        kpi_included = ClassCountAmount(
+            count=included_count, usd=money_str(included_usd_minor)
+        )
+        kpi_excluded = ClassCountAmount(
+            count=excluded_count, usd=money_str(excluded_usd_minor)
+        )
+    elif order_class == "included":
+        # 视图内全部为已计入：实付 = 视图总额 × 50%；应付理论/差值/应得/合并卡不适用
+        paid_minor = share_service.supplier_paid_actual(total_usd_minor)
+        kpi_payable = None
+        kpi_paid = money_str(paid_minor)
+        kpi_hidden = None
+        kpi_net_expected = None
+        kpi_net_actual = money_str(share_service.net_actual(my_share_minor, paid_minor))
+        kpi_included = None
+        kpi_excluded = None
+    else:  # excluded：供应商侧全部不适用；实际净利 = 分成（与分成卡同值，不重复展示）
+        kpi_payable = None
+        kpi_paid = None
+        kpi_hidden = None
+        kpi_net_expected = None
+        kpi_net_actual = None
+        kpi_included = None
+        kpi_excluded = None
+
     return SummaryResponse(
         range=RangeOut(from_=date_from, to=date_to),
         meta=SummaryMeta(
@@ -407,19 +483,25 @@ def build_summary(db, date_from: date, date_to: date) -> SummaryResponse:
             ad_available=ad_available,
             ad_error=ad_error,
         ),
-        degraded=Degraded(share_rules_pending=True),
         kpis=KpisOut(
-            total_revenue=money_str(gross_usd_minor + ad_total_minor),
-            orders_gross_usd=money_str(gross_usd_minor),
-            ad_total=money_str(ad_total_minor),
-            included_revenue=None,  # B1（AC-K2）
-            excluded_revenue=None,  # B1（AC-K3）
-            gross_usd=money_str(gross_usd_minor),
+            orders_total=orders_total,
             orders_completed=orders_completed,
             orders_returned=orders_returned,
+            total_usd=money_str(total_usd_minor),
+            my_share_usd=money_str(my_share_minor),
+            supplier_payable_usd=kpi_payable,
+            supplier_paid_usd=kpi_paid,
+            hidden_saving_usd=kpi_hidden,
+            net_expected_usd=kpi_net_expected,
+            net_actual_usd=kpi_net_actual,
+            refunded_usd=money_str(refunded_usd_minor),
+            included=kpi_included,
+            excluded=kpi_excluded,
+            ad_total=money_str(ad_total_minor),
+            ad_days_reported=len(ad_rows),
             countries=len(countries),
             top_country=table_rows[0].key if table_rows else None,
-            ad_days_reported=len(ad_rows),
+            no_usd_order_count=no_usd_order_count_all,
         ),
         daily=DailyOut(
             days=day_keys,

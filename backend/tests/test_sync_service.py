@@ -17,6 +17,7 @@ from sqlalchemy import select
 from app.config import Settings
 from app.models import AdRevenueDaily, Order, SyncRun
 from app.services import sync_service
+from app.services.classifier import HashClassifier, classify_order_no
 from app.services.sync_service import (
     clamp_manual_window,
     normalize_order,
@@ -27,6 +28,12 @@ from app.upstream.client import PATH_AD_SUMMARY, PATH_ORDER_LIST, PATH_TOKEN, Up
 
 TODAY = date(2026, 10, 12)
 
+#: 测试盐值（conftest 同款；黄金向量见 test_classifier_share）
+TEST_SALT = "unit-test-salt"
+TEST_CLASSIFIER = HashClassifier(
+    salt=TEST_SALT, keep_ratio=Decimal("0.8")
+)
+
 
 def make_settings(**overrides) -> Settings:
     base = {
@@ -34,6 +41,7 @@ def make_settings(**overrides) -> Settings:
         "upstream_client_secret": "secret",
         "sync_lookback_days": 3,
         "sync_backfill_days": 92,
+        "order_filter_salt": TEST_SALT,
     }
     base.update(overrides)
     return Settings(**base)
@@ -129,7 +137,9 @@ def sample_rows() -> list[dict]:
 
 
 def test_normalize_order_mapping():
-    o1, o2 = (normalize_order(row) for row in sample_rows())
+    o1, o2 = (
+        normalize_order(row, TEST_CLASSIFIER) for row in sample_rows()
+    )
     assert o1.order_id == "O1"
     assert o1.create_time == "2026-10-01 10:00:00"  # 原值零换算（AC-S8）
     assert o1.create_date == date(2026, 10, 1)
@@ -137,8 +147,10 @@ def test_normalize_order_mapping():
     assert o1.amount_minor == Decimal("5000")
     assert o1.usd_order_amount_minor == Decimal("270")
     assert o1.is_returned is False
-    assert o1.order_class is None  # B1：分类器空实现
-    # 退款单：refundTime 非空白 → is_returned；首尾空白剥离
+    # 哈希打标（REQ-20261014-01 黄金向量：O1 → included）
+    assert o1.order_class == classify_order_no(TEST_SALT, "O1", Decimal("0.8"))
+    assert o1.order_class == "included"
+    # 退款单：refundTime 非空白 → is_returned；首尾空白剥离；tag 照常计算
     assert o2.refund_time == "2026-10-03 09:00:00"
     assert o2.is_returned is True
     assert o2.promotion_code == "promo-1"
@@ -180,6 +192,40 @@ def test_upsert_orders_idempotent_rerun(db_session):
     assert stored["O1"].amount_minor == Decimal("6000")  # 更新集生效
     assert stored["O1"].usd_order_amount_minor == Decimal("310")
     assert stored["O1"].create_time == "2026-10-01 10:00:00"  # 不可变列不动
+
+
+def test_upsert_never_overwrites_order_class(db_session):
+    """REQ-20261014-01 §3.5：tag 入库算一次、永不改变（更新集不含 order_class）。"""
+    rows = sample_rows()
+    first = normalize_order(rows[0], TEST_CLASSIFIER)
+    sync_service.upsert_orders(db_session, [first])
+    db_session.commit()
+    original = db_session.scalar(select(Order).where(Order.order_id == "O1"))
+    assert original.order_class == "included"  # 黄金向量
+
+    # 换一个「判定结果相反」的分类器重拉同一订单
+    flipped_ratio = Decimal("0.01") if first.order_class == "included" else Decimal("0.8")
+    flipped = normalize_order(rows[0], HashClassifier(salt=TEST_SALT, keep_ratio=flipped_ratio))
+    assert flipped.order_class == "excluded"  # 前置：确实相反
+    sync_service.upsert_orders(db_session, [flipped])
+    db_session.commit()
+    after = db_session.scalar(select(Order).where(Order.order_id == "O1"))
+    assert after.amount_minor == first.amount_minor  # 金额列正常 upsert
+    assert after.order_class == "included"  # tag 不被覆盖
+
+
+def test_execute_run_empty_salt_fails_loudly(db_session):
+    """空盐：run=failed、零拉取、零写入（宁可失败，不落 NULL tag）。"""
+    fake = FakeSyncUpstream({"2026-10-01": sample_rows()})
+    settings = make_settings(order_filter_salt="")
+    run = sync_service.execute_run(
+        "scheduled", [date(2026, 10, 1)], db=db_session, client_factory=fake.client,
+        settings=settings,
+    )
+    assert run.status == "failed"
+    assert run.orders_error and "ORDER_FILTER_SALT" in run.orders_error
+    assert fake.order_requests == 0  # 未发起任何订单拉取
+    assert db_session.scalars(select(Order)).all() == []
 
 
 # ---------- execute_run 生命周期 ----------

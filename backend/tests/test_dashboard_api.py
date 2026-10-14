@@ -33,6 +33,7 @@ def add_order(
     refund_time: str | None = None,
     theater_id: str = "TH",
     promotion_code: str | None = None,
+    order_class: str | None = None,
 ) -> None:
     db.add(
         Order(
@@ -48,19 +49,23 @@ def add_order(
             refund_time=refund_time,
             is_returned=refund_time is not None,
             promotion_code=promotion_code,
+            order_class=order_class,
         )
     )
 
 
 def seed_orders(db) -> None:
-    add_order(db, "A", "2026-10-01 10:00:00", "MXN", "5000", usd_minor="270")
+    add_order(db, "A", "2026-10-01 10:00:00", "MXN", "5000", usd_minor="270",
+              order_class="included")
     add_order(db, "B", "2026-10-01 11:00:00", "EUR", "1000", usd_minor="1100",
-              language="fr-FR")
+              language="fr-FR", order_class="excluded")
     add_order(db, "C", "2026-10-02 09:00:00", "KRW", "200000", usd_minor="144",
-              language="ko-KR")
-    add_order(db, "D", "2026-10-02 10:00:00", "MXN", "800", usd_minor=None)  # 缺 usd
+              language="ko-KR", order_class="included")
+    add_order(db, "D", "2026-10-02 10:00:00", "MXN", "800", usd_minor=None,
+              order_class="excluded")  # 缺 usd
     add_order(db, "E", "2026-10-02 11:00:00", "EUR", "200", usd_minor="220",
-              language="fr-FR", refund_time="2026-10-03 09:00:00")
+              language="fr-FR", refund_time="2026-10-03 09:00:00",
+              order_class="excluded")
     db.commit()
 
 
@@ -108,18 +113,41 @@ def test_summary_rejects_span_over_92_days(client, auth):
     assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
-def test_summary_smoke_and_b1_nulls(client, auth, db_session):
+def test_summary_smoke_new_kpis(client, auth, db_session):
     seed_orders(db_session)
     db_session.add(AdRevenueDaily(date=date(2026, 10, 1), amount_minor=Decimal("17144")))
     db_session.commit()
     body = client.get(f"{API}/summary", params=RANGE, headers=auth).json()
-    assert set(body) == {"range", "meta", "degraded", "kpis", "daily", "conv", "countries"}
+    assert set(body) == {"range", "meta", "kpis", "daily", "conv", "countries"}
     assert body["range"] == {"from": "2026-10-01", "to": "2026-10-02"}
-    assert body["degraded"] == {"share_rules_pending": True}
-    assert body["kpis"]["included_revenue"] is None  # B1：键在、值 null（AC-K2）
-    assert body["kpis"]["orders_gross_usd"] == "15.14"  # 270+1100+144（D 缺 usd、E 退款均不计）
-    assert body["kpis"]["orders_returned"] == 1
+    k = body["kpis"]
+    # 新口径（REQ-20261014-01）：含退款 E(220)；D 缺 usd 不计金额
+    # total = 270+1100+144+220 = 1734
+    assert k["total_usd"] == "17.34"
+    assert k["my_share_usd"] == "12.14"  # 1734 × 0.7 = 1213.8
+    assert k["supplier_payable_usd"] == "8.67"  # × 0.5 = 867
+    assert k["supplier_paid_usd"] == "2.07"  # (270+144) × 0.5 = 207
+    assert k["hidden_saving_usd"] == "6.60"  # 867 − 207 = 660
+    assert k["refunded_usd"] == "2.20"
+    assert (k["included"]["count"], k["included"]["usd"]) == (2, "4.14")
+    assert (k["excluded"]["count"], k["excluded"]["usd"]) == (3, "13.20")
+    assert k["orders_total"] == 5 and k["orders_returned"] == 1
     assert body["meta"]["sync_status"] == "never"
+
+
+def test_summary_class_param_scopes_dataset(client, auth, db_session):
+    """summary?class=included：行集收窄 + 不适用卡片 null（REQ-20261014-01）。"""
+    seed_orders(db_session)
+    body = client.get(
+        f"{API}/summary", params={**RANGE, "class": "included"}, headers=auth
+    ).json()
+    k = body["kpis"]
+    assert k["orders_total"] == 2  # A + C
+    assert k["total_usd"] == "4.14"
+    assert k["supplier_paid_usd"] == "2.07"
+    assert k["supplier_payable_usd"] is None
+    assert k["hidden_saving_usd"] is None
+    assert k["included"] is None and k["excluded"] is None
 
 
 # ---------- 订单表（§5.3） ----------
@@ -140,7 +168,7 @@ def test_orders_default_sort_and_shape(client, auth, db_session):
     row_d = body["rows"][1]
     assert row_d["usd"] is None and row_d["amount"] == "8.00"
     assert row_d["country_key"] == "MX"
-    assert row_d["order_class"] is None  # B1（AC-O1）
+    assert row_d["order_class"] == "excluded"  # tag 出真值（REQ-20261014-01）
     assert body["rows"][0]["status"] == "returned"
 
 
@@ -153,6 +181,20 @@ def test_orders_currency_and_status_filters(client, auth, db_session):
     ).json()
     assert [row["order_id"] for row in body["rows"]] == ["D", "A"]
     assert body["total"] == 2 and body["total_in_range"] == 5
+
+
+def test_orders_class_filter(client, auth, db_session):
+    """class 筛选（REQ-20261014-01 §六）：仅作用于列表行集。"""
+    seed_orders(db_session)
+    included = client.get(
+        f"{API}/orders", params={**RANGE, "class": "included"}, headers=auth
+    ).json()
+    assert [row["order_id"] for row in included["rows"]] == ["C", "A"]
+    assert included["total"] == 2 and included["total_in_range"] == 5
+    excluded = client.get(
+        f"{API}/orders", params={**RANGE, "class": "excluded"}, headers=auth
+    ).json()
+    assert [row["order_id"] for row in excluded["rows"]] == ["E", "D", "B"]
 
 
 def test_orders_usd_sort_null_semantics(client, auth, db_session):

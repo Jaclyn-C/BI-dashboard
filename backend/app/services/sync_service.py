@@ -29,7 +29,11 @@ from app.config import Settings, get_settings
 from app.db import SessionLocal
 from app.models import AdRevenueDaily, Order, SyncRun
 from app.schemas.dashboard import MAX_RANGE_DAYS, SyncStatusResponse
-from app.services.classifier import NormalizedOrder, OrderClassifier, UnknownClassifier
+from app.services.classifier import (
+    NormalizedOrder,
+    OrderClassifier,
+    build_default_classifier,
+)
 from app.upstream.client import UpstreamClient, UpstreamError
 from app.upstream.fetcher import fetch_ad_summary, fetch_day
 
@@ -42,10 +46,8 @@ _sync_lock = threading.Lock()
 _state_lock = threading.Lock()
 _current_run: "CurrentRun | None" = None
 
-#: 默认分类器（B1 空实现，AC-CL1）
-_classifier: OrderClassifier = UnknownClassifier()
-
-#: upsert 更新集（DESIGN §2.1：create_time/create_date/theater/chapter 视为不可变）
+#: upsert 更新集（DESIGN §2.1：create_time/create_date/theater/chapter 视为不可变；
+#: order_class 同样不可变——tag 入库算一次、永不改变，REQ-20261014-01 §3.5）
 _ORDER_UPDATE_COLUMNS = (
     "amount_minor",
     "usd_order_amount_minor",
@@ -54,7 +56,6 @@ _ORDER_UPDATE_COLUMNS = (
     "refund_time",
     "is_returned",
     "promotion_code",
-    "order_class",
 )
 
 _UPSERT_BATCH_SIZE = 500
@@ -101,12 +102,14 @@ def _to_decimal(value: object) -> Decimal | None:
         return None
 
 
-def normalize_order(row: dict, classifier: OrderClassifier = _classifier) -> NormalizedOrder | None:
+def normalize_order(
+    row: dict, classifier: OrderClassifier | None = None
+) -> NormalizedOrder | None:
     """上游原始行 → NormalizedOrder；不可入库（缺主键/日期）返回 None 并记日志。
 
     映射：orderAmount→usd_order_amount_minor、amount→amount_minor（最小单位，
     原值精度无损）、create_date=create_time[:10]、is_returned=refund_time 非空白、
-    order_class=classifier.classify(row)（B1 空实现→None）。
+    order_class=classifier.classify(row)（哈希判定，REQ-20261014-01；tag 永有值）。
     """
     order_id = str(row.get("orderId") or "").strip()
     create_time = str(row.get("createTime") or "").strip()
@@ -142,6 +145,8 @@ def normalize_order(row: dict, classifier: OrderClassifier = _classifier) -> Nor
         promotion_code=str(row.get("promotionCode") or "").strip()[:64] or None,
         order_class=None,
     )
+    if classifier is None:
+        classifier = build_default_classifier(get_settings())
     normalized.order_class = classifier.classify(normalized)
     return normalized
 
@@ -432,12 +437,30 @@ def execute_run(
     *,
     db,
     client_factory: Callable[[], UpstreamClient] | None = None,
-    classifier: OrderClassifier = _classifier,
+    classifier: OrderClassifier | None = None,
     settings: Settings | None = None,
 ) -> SyncRun:
     """执行一次同步（调用方须持单飞锁）。两阶段独立 commit，run 行收尾定稿。"""
     cfg = settings or get_settings()
     days = sorted(days)
+    if classifier is None:
+        # 空盐 = 响亮失败（REQ-20261014-01）：tag 入库后永不改变，落 NULL 只能
+        # 人工回填——宁可本轮同步失败，也不静默写空标签。零拉取、零写入。
+        try:
+            classifier = build_default_classifier(cfg)
+        except ValueError as exc:
+            logger.error("sync aborted: %s", exc)
+            run = SyncRun(
+                trigger=trigger,
+                window_start=days[0],
+                window_end=days[-1],
+                status="failed",
+                orders_error=f"order classifier unavailable: {exc}",
+                finished_at=datetime.now(UTC),
+            )
+            db.add(run)
+            db.commit()
+            return run
     run = SyncRun(trigger=trigger, window_start=days[0], window_end=days[-1], status="running")
     db.add(run)
     db.commit()  # running 状态先行可见（状态行/轮询）
@@ -476,6 +499,9 @@ def execute_run(
                 for row in fetched_rows
                 if (order := normalize_order(row, classifier)) is not None
             ]
+            if any(order.order_class is None for order in normalized):
+                # 不变量守卫：分类器必须给出 tag，NULL 落库后同步路径永不回填
+                raise ValueError("classifier returned NULL order_class for some orders")
             orders_upserted = upsert_orders(db, normalized)
             db.commit()  # orders 阶段独立 commit
         except Exception as exc:  # noqa: BLE001 - 阶段失败统一降级，不裸抛 500

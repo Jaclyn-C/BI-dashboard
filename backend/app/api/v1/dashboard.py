@@ -25,6 +25,7 @@ from app.api.errors import ApiError
 from app.schemas.dashboard import (
     MAX_RANGE_DAYS,
     TABLE_PAGE_SIZE,
+    ClassFilter,
     CsvLang,
     CsvScope,
     OrderRow,
@@ -69,31 +70,34 @@ RangeTo = Annotated[date, Query(alias="to", description="区间终点 YYYY-MM-DD
     "/summary",
     response_model=SummaryResponse,
     summary="看板总览（一次装载除订单表外全部区块）",
-    description="KPI / 每日双口径 / 广告 / 新旧美元对比 / 国家分布，聚合在后端以 Decimal 完成。"
-    "B1 降级：degraded.share_rules_pending=true，分成相关字段值为 null。",
+    description="KPI（REQ-20261014-01 分成口径）/ 每日双口径 / 广告 / 新旧美元对比 / 国家分布，"
+    "聚合在后端以 Decimal 完成。class=included/excluded 为数据集切换："
+    "全部内容只含该类订单，不适用卡片的值为 null。",
 )
 def summary(
     date_from: RangeFrom,
     date_to: RangeTo,
+    order_class: ClassFilter = Query(default="all", alias="class"),
     db: Session = Depends(get_db),
 ) -> SummaryResponse:
     """GET /dashboard/summary（§5.2 契约）。"""
     date_from, date_to = parse_range(date_from, date_to)
-    return aggregation.build_summary(db, date_from, date_to)
+    return aggregation.build_summary(db, date_from, date_to, order_class)
 
 
 @router.get(
     "/orders",
     response_model=OrdersResponse,
     summary="订单明细分页表",
-    description="筛选（币种/状态）+ 排序（时间/币种/金额/美元）+ 25 行/页分页。"
-    "B1 无 class 筛选参数（恢复时追加，向后兼容，§5.7）。",
+    description="筛选（类别/币种/状态）+ 排序（时间/币种/金额/美元）+ 25 行/页分页。"
+    "class 筛选仅作用于列表展示（REQ-20261014-01 §六）。",
 )
 def orders(
     date_from: RangeFrom,
     date_to: RangeTo,
     currency: str = Query(default="all", description="币种筛选：all 或币种码"),
     status: StatusFilter = Query(default="all"),
+    order_class: ClassFilter = Query(default="all", alias="class"),
     sort: SortKey = Query(default="date"),
     direction: SortDir = Query(default="desc", alias="dir"),
     page: int = Query(default=1, ge=1),
@@ -101,7 +105,9 @@ def orders(
 ) -> OrdersResponse:
     """GET /dashboard/orders（§5.3 契约）。"""
     date_from, date_to = parse_range(date_from, date_to)
-    base = orders_query.orders_query(date_from, date_to, currency=currency, status=status)
+    base = orders_query.orders_query(
+        date_from, date_to, currency=currency, status=status, order_class=order_class
+    )
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
     base_all = orders_query.orders_query(date_from, date_to)
     total_in_range = db.scalar(select(func.count()).select_from(base_all.subquery())) or 0
@@ -145,7 +151,8 @@ def orders(
     "/orders.csv",
     summary="订单 CSV 导出（流式）",
     description="scope=view 套用表格筛选+排序全量行；scope=all 区间全量"
-    "（create_time desc 固定序）。UTF-8 BOM + CRLF；class/revShare/earningsUsd 三列空（B1）；"
+    "（create_time desc 固定序）。UTF-8 BOM + CRLF；class 列填已计入/被剔除，"
+    "revShare/earningsUsd 两列空（旧口径死列，REQ-20261014-01）；"
     "文件名两档同名 orders_all_{from}_to_{to}.csv（AC-X2 差异登记 §4.6-4）。",
 )
 def orders_csv(
@@ -154,6 +161,7 @@ def orders_csv(
     scope: CsvScope = Query(default="view"),
     currency: str = Query(default="all"),
     status: StatusFilter = Query(default="all"),
+    order_class: ClassFilter = Query(default="all", alias="class"),
     sort: SortKey = Query(default="date"),
     direction: SortDir = Query(default="desc", alias="dir"),
     lang: CsvLang = Query(default="en"),
@@ -169,6 +177,7 @@ def orders_csv(
             scope=scope,
             currency=currency,
             status=status,
+            order_class=order_class,
             sort=sort,
             direction=direction,
             lang=lang,

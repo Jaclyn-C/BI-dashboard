@@ -1,39 +1,51 @@
-"""分成计算能力（DESIGN-20261012-02 §4.4，REQ AC-AG5 / D13）。
+"""分成计算（REQ-20261014-01 新口径，全部 Decimal、比例从 Settings 读取）。
 
-⚠️ B1 红线：本模块实现「配置化分成比例」能力并配套单测，但 **不得被聚合 /
-API / CSV 任何输出路径 import**（DESIGN B-T4 验收含 grep 断言；AC-D3 分成
-金额零输出）。B1 恢复（规则确认）后再接线。
+口径（计算基数 = 上游自报美元 usd_order_amount_minor）：
+- 你的上游分成 = Σ 全部订单 × 70%（upstream_share_ratio）
+- 供应商应付（理论）= Σ 全部订单 × 50%（supplier_share_ratio，假设不隐藏）
+- 供应商实付（实际）= Σ 已计入订单 × 50%
+- 差值 = 应付 − 实付（被剔除订单对应的金额）
+- 应得净利润 = 分成 − 应付（理论）
+- 实际净利润 = 分成 − 实付
 
-比例从 Settings 读取（SHARE_INCLUDED / SHARE_EXCLUDED，D13/B2）。
+B1 说明：旧 20%/70% 双档口径及其输出隔离红线随本 REQ 解除（业务重定义
+规则为哈希过滤，见 classifier.py 与 docs/requirements/REQ-20261014-01）。
 """
 
 from decimal import Decimal
 
 from app.config import get_settings
-from app.services.classifier import NormalizedOrder
 
 
-def share_ratio(order_class: str) -> Decimal:
-    """按订单类别取分成比例（included=20% / excluded=70%，配置化）。"""
-    settings = get_settings()
-    if order_class == "included":
-        return settings.share_included
-    if order_class == "excluded":
-        return settings.share_excluded
-    raise ValueError(f"unknown order class: {order_class!r}")
+def my_upstream_share(usd_total_minor: Decimal) -> Decimal:
+    """你的分成 = Σ 全部订单原金额（最小单位）× 70%。"""
+    return usd_total_minor * get_settings().upstream_share_ratio
 
 
-def share_amount(usd_minor: Decimal, order_class: str) -> Decimal:
-    """分成金额 = 上游美元毛额（最小单位）× 分成比例。
-
-    输入应为已完成订单的上游自报美元金额；结果保持最小单位精度
-    （展示层再走 money_str 的两位小数量化）。
-    """
-    return usd_minor * share_ratio(order_class)
+def supplier_payable_theoretical(usd_total_minor: Decimal) -> Decimal:
+    """供应商应付（理论）= Σ 全部订单原金额 × 50%（假设不隐藏任何订单）。"""
+    return usd_total_minor * get_settings().supplier_share_ratio
 
 
-def share_amount_for(order: NormalizedOrder) -> Decimal | None:
-    """便捷形态：订单缺上游美元（None）或类别未知时返回 None（B1 恒 None）。"""
-    if order.usd_order_amount_minor is None or order.order_class is None:
-        return None
-    return share_amount(order.usd_order_amount_minor, order.order_class)
+def supplier_paid_actual(included_usd_total_minor: Decimal) -> Decimal:
+    """供应商实付（实际）= Σ 已计入订单原金额 × 50%。"""
+    return included_usd_total_minor * get_settings().supplier_share_ratio
+
+
+def hidden_saving(
+    payable_theoretical_minor: Decimal, paid_actual_minor: Decimal
+) -> Decimal:
+    """差值 = 应付（理论）− 实付（实际），即被剔除订单对应的金额。"""
+    return payable_theoretical_minor - paid_actual_minor
+
+
+def net_expected(
+    my_share_minor: Decimal, payable_theoretical_minor: Decimal
+) -> Decimal:
+    """应得净利润 = 你的分成 − 供应商应付（理论）= 全部 × 20%。"""
+    return my_share_minor - payable_theoretical_minor
+
+
+def net_actual(my_share_minor: Decimal, paid_actual_minor: Decimal) -> Decimal:
+    """实际净利润 = 你的分成 − 供应商实付。"""
+    return my_share_minor - paid_actual_minor

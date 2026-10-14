@@ -74,14 +74,22 @@ class Settings(BaseSettings):
     sync_lookback_days: int = 3  # D2：每次滚动重拉最近 N 天（含当日）
     sync_backfill_days: int = 92  # D3：期望覆盖域（首次部署自动回填）
 
-    # ===== 分成比例（D13：B1 期间不接入任何输出路径，仅 share_service 读取）=====
-    share_included: Decimal = Decimal("0.20")
-    share_excluded: Decimal = Decimal("0.70")
+    # ===== 订单过滤与分成（REQ-20261014-01，B1 已由业务重定义解除）=====
+    #: 私密盐值：sha256(salt:order_no) 稳定判定 included/excluded（需求 §3）。
+    #: 只存 .env，绝不入库/入代码/泄露给下游；一经使用不可更换
+    #: （更换后新订单判定与存量 tag 不一致，tag 永不改变的语义被破坏）。
+    order_filter_salt: str = ""
+    #: 保留比例：< keep_ratio → included（已计入/下发），默认 80%
+    order_keep_ratio: Decimal = Decimal("0.8")
+    #: 你的上游分成比例：全部订单原金额（上游自报美元）× 70%
+    upstream_share_ratio: Decimal = Decimal("0.70")
+    #: 供应商分成比例：已计入订单原金额 × 50%
+    supplier_share_ratio: Decimal = Decimal("0.50")
 
-    @field_validator("share_included", "share_excluded")
+    @field_validator("order_keep_ratio", "upstream_share_ratio", "supplier_share_ratio")
     @classmethod
     def _check_share_ratio(cls, value: Decimal) -> Decimal:
-        """分成比例必须是 (0, 1] 内的 Decimal（防手滑配出 20 倍）。"""
+        """比例必须是 (0, 1] 内的 Decimal（防手滑配出 20 倍）。"""
         if not Decimal("0") < value <= Decimal("1"):
             raise ValueError("share ratio must be in (0, 1]")
         return value
@@ -107,10 +115,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _check_production_secrets(self) -> "Settings":
-        """生产环境启动即校验 SECRET_KEY，不合格直接失败（不允许带弱密钥上线）。"""
+        """生产环境启动即校验 SECRET_KEY 与过滤盐值，不合格直接失败（不允许带弱密钥上线）。"""
         if self.is_production:
             if len(self.secret_key) < 32 or self.secret_key in _INSECURE_SECRET_KEYS:
                 raise ValueError("生产环境 SECRET_KEY 必须是 >=32 字符的随机值（不能是占位符）")
+            if not self.order_filter_salt.strip():
+                raise ValueError("生产环境 ORDER_FILTER_SALT 必须配置（盐值一经使用不可更换）")
         return self
 
 

@@ -1,20 +1,48 @@
-"""分类器与分成能力单测（REQ AC-CL1/CL2、AC-AG5/D13）。
+"""哈希分类器与分成数学单测（REQ-20261014-01）。
 
-B1 红线验证点：UnknownClassifier 恒 None（不猜规则）；share_service 的
-比例/金额数学正确（能力在位）；输出路径 import 隔离断言见 test_redlines。
+- 黄金向量（salt=unit-test-salt，测试内用 hashlib 独立复算，防实现漂移）；
+- 确定性 / 盐值敏感 / 仅依赖 order_id；
+- 万级合成订单 included 占比 ≈ 80%（确定性哈希，宽界无抖动）；
+- share_service 新口径数学（70%/50%，精确 Decimal）；
+- 空 salt 响亮失败（宁可同步失败，不落 NULL tag）。
 """
 
+import hashlib
+from datetime import date
 from decimal import Decimal
 
 import pytest
 
-from app.services.classifier import NormalizedOrder, UnknownClassifier
-from app.services.share_service import share_amount, share_amount_for, share_ratio
+from app.config import Settings
+from app.services.classifier import (
+    HashClassifier,
+    NormalizedOrder,
+    build_default_classifier,
+    classify_order_no,
+    hash_value,
+)
+from app.services.share_service import (
+    hidden_saving,
+    my_upstream_share,
+    net_actual,
+    net_expected,
+    supplier_paid_actual,
+    supplier_payable_theoretical,
+)
+
+SALT = "unit-test-salt"
+KEEP = Decimal("0.8")
+
+#: 黄金向量（digest 前 8 位十六进制与期望类别；独立于实现手工算出）
+GOLDEN = [
+    ("O1", "1edac7a3", "included"),
+    ("O2", "919fd50f", "included"),
+    ("X0", "e6f33e82", "excluded"),
+    ("X2", "d7dc4eca", "excluded"),
+]
 
 
 def make_order(**overrides) -> NormalizedOrder:
-    from datetime import date
-
     base = dict(
         order_id="O1",
         create_time="2026-10-01 10:00:00",
@@ -34,45 +62,83 @@ def make_order(**overrides) -> NormalizedOrder:
     return NormalizedOrder(**base)
 
 
-# ---------- 分类器（B1 空实现） ----------
+# ---------- 分类器（REQ-20261014-01） ----------
 
 
-def test_unknown_classifier_always_none():
-    """AC-CL1：规则未确认，classify 恒 None——宁缺毋错。"""
-    classifier = UnknownClassifier()
-    assert classifier.classify(make_order()) is None
-    assert classifier.classify(make_order(is_returned=True)) is None
-    assert classifier.classify(make_order(currency_type="USD")) is None
+def test_hash_value_matches_independent_recompute():
+    """value 与 hashlib 独立复算一致（int(hex8)/2^32，全程精确 Decimal）。"""
+    for order_no, prefix, _ in GOLDEN:
+        digest = hashlib.sha256(f"{SALT}:{order_no}".encode()).hexdigest()
+        assert digest[:8] == prefix  # 向量本身防漂移
+        assert hash_value(SALT, order_no) == Decimal(int(digest[:8], 16)) / Decimal(1 << 32)
 
 
-def test_classifier_protocol_runtime_checkable():
-    assert isinstance(UnknownClassifier(), object)
+def test_classify_golden_vectors():
+    for order_no, _, expected in GOLDEN:
+        assert classify_order_no(SALT, order_no, KEEP) == expected
 
 
-# ---------- 分成能力（B1 不接线，仅数学单测） ----------
+def test_classify_deterministic_and_salt_sensitive():
+    assert classify_order_no(SALT, "O1", KEEP) == classify_order_no(SALT, "O1", KEEP)
+    # 换盐判定翻转（s0 → excluded，s1 → included；判定依赖私密盐值）
+    assert classify_order_no("s0", "O1", KEEP) == "excluded"
+    assert classify_order_no("s1", "O1", KEEP) == "included"
 
 
-def test_share_ratio_from_settings():
-    assert share_ratio("included") == Decimal("0.20")
-    assert share_ratio("excluded") == Decimal("0.70")
-    with pytest.raises(ValueError, match="unknown order class"):
-        share_ratio("mystery")
-
-
-def test_share_amount_math():
-    """金额 = 上游美元毛额 × 比例，保持最小单位精度。"""
-    assert share_amount(Decimal("1000"), "included") == Decimal("200.0")
-    assert share_amount(Decimal("1000"), "excluded") == Decimal("700.0")
-    assert share_amount(Decimal("270"), "included") == Decimal("54.0")
-
-
-def test_share_amount_for_requires_class_and_usd():
-    """缺 usd 或类别未知 → None（B1 期间恒 None）。"""
-    assert share_amount_for(make_order()) is None  # order_class None
-    assert share_amount_for(make_order(order_class="included")) == Decimal("54.0")
-    assert (
-        share_amount_for(
-            make_order(order_class="included", usd_order_amount_minor=None)
-        )
-        is None
+def test_classify_only_depends_on_order_id():
+    classifier = HashClassifier(salt=SALT, keep_ratio=KEEP)
+    first = classifier.classify(make_order())
+    same_id = classifier.classify(
+        make_order(currency_type="USD", amount_minor=Decimal("1"), is_returned=True)
     )
+    assert first == same_id == "included"  # O1 向量
+
+
+def test_classify_keep_ratio_boundaries():
+    """keep_ratio=1 全计入；足够小的阈值把 O1 挤出（0.1205 → excluded）。"""
+    assert classify_order_no(SALT, "O1", Decimal("1")) == "included"
+    assert classify_order_no(SALT, "O1", Decimal("0.1")) == "excluded"
+
+
+def test_synthetic_distribution_near_80_percent():
+    included = sum(
+        1
+        for i in range(10000)
+        if classify_order_no(SALT, f"ORD{i}", KEEP) == "included"
+    )
+    assert 0.78 <= included / 10000 <= 0.82
+
+
+def test_build_default_classifier_empty_salt_raises():
+    with pytest.raises(ValueError, match="ORDER_FILTER_SALT"):
+        build_default_classifier(Settings(order_filter_salt=""))
+    built = build_default_classifier(Settings(order_filter_salt=" s "))
+    assert built.salt == "s" and built.keep_ratio == Decimal("0.8")
+
+
+# ---------- 分成数学（REQ-20261014-01 新口径） ----------
+
+
+def test_share_math_exact_decimal():
+    total = Decimal("100000")  # $1000.00 minor
+    included_total = Decimal("80000")  # $800.00 minor
+    share = my_upstream_share(total)
+    payable = supplier_payable_theoretical(total)
+    paid = supplier_paid_actual(included_total)
+    assert share == Decimal("70000.00")
+    assert payable == Decimal("50000.00")
+    assert paid == Decimal("40000.00")
+    assert hidden_saving(payable, paid) == Decimal("10000.00")
+    assert net_expected(share, payable) == Decimal("20000.00")  # 全部 × 20%
+    assert net_actual(share, paid) == Decimal("30000.00")
+
+
+def test_share_math_uneven_split():
+    """真实形态：Σ全部与 Σ已计入不等（剔除单不付供应商）。"""
+    total = Decimal("3687")
+    included_total = Decimal("2700")
+    assert my_upstream_share(total) == Decimal("2580.90")
+    assert supplier_payable_theoretical(total) == Decimal("1843.50")
+    assert supplier_paid_actual(included_total) == Decimal("1350.00")
+    assert hidden_saving(Decimal("1843.50"), Decimal("1350.00")) == Decimal("493.50")
+    assert net_actual(Decimal("2580.90"), Decimal("1350.00")) == Decimal("1230.90")

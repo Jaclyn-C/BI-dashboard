@@ -1,9 +1,14 @@
-"""聚合引擎测试（真实 PostgreSQL 测试库；REQ AC-AG1–AG5、AC-K*、AC-C1–C8）。
+"""聚合引擎测试（真实 PostgreSQL 测试库；REQ-20261012-02 AC-AG* + REQ-20261014-01 新口径）。
 
-黄金夹具：7 笔订单（含 1 笔退款、1 笔缺上游美元、1 个无汇率币种 BHD）+
-2 天广告收益。全部期望值为手工按 DESIGN §4 语义以 Decimal 推得（HTML
-derive()/convCompareData()/countries map 对照）。另覆盖折叠派生（前 6/7/9 +
-__other）与 B1 降级键（分成相关值恒 null）。
+黄金夹具：7 笔订单（含 1 笔退款、1 笔缺上游美元、1 个无汇率币种 BHD，tag：
+included=O1/O3/O6，excluded=O2/O4/O5/O7）+ 2 天广告收益。
+
+两套口径分开钉住：
+- 新口径 KPI（REQ-20261014-01）：基数=上游自报美元、**含退款单**、缺 usd 不计金额
+  只计数；全部期望值手工 Decimal 推得（见各断言注释）；
+- 旧口径每日/对比/国家卡：复刻 HTML 行为（退款剔除）原样保留为回归护栏。
+
+数据集切换（class=included/excluded）：行集收窄 + 不适用卡片为 None。
 """
 
 from datetime import date
@@ -24,6 +29,7 @@ def add_order(
     language: str | None,
     usd_minor: str | None = None,
     refund_time: str | None = None,
+    order_class: str | None = None,
 ) -> None:
     db.add(
         Order(
@@ -38,26 +44,32 @@ def add_order(
             usd_order_amount_minor=None if usd_minor is None else Decimal(usd_minor),
             refund_time=refund_time,
             is_returned=refund_time is not None,
+            order_class=order_class,
         )
     )
 
 
 def seed_golden(db) -> None:
-    """黄金夹具（期望值推导见各断言注释）。"""
+    """黄金夹具（期望值推导见各断言注释）。
+
+    tag 分布：included = O1(270) / O3(1500) / O6(453)；excluded = O2(1100) /
+    O4(144) / O5(缺 usd) / O7(220，退款)。
+    """
     add_order(db, "O1", "2026-10-01", "2026-10-01 10:00:00", "MXN", "5000",
-              language="es-MX", usd_minor="270")
+              language="es-MX", usd_minor="270", order_class="included")
     add_order(db, "O2", "2026-10-01", "2026-10-01 11:00:00", "EUR", "1000",
-              language="fr-FR", usd_minor="1100")
+              language="fr-FR", usd_minor="1100", order_class="excluded")
     add_order(db, "O3", "2026-10-01", "2026-10-01 12:00:00", "USD", "1500",
-              language="en-US", usd_minor="1500")
+              language="en-US", usd_minor="1500", order_class="included")
     add_order(db, "O4", "2026-10-02", "2026-10-02 09:00:00", "KRW", "200000",
-              language="ko-KR", usd_minor="144")
+              language="ko-KR", usd_minor="144", order_class="excluded")
     add_order(db, "O5", "2026-10-02", "2026-10-02 10:00:00", "BHD", "700",
-              language="ar-BH")  # 缺上游美元：新口径排除 + 计数（AC-AG3）
+              language="ar-BH", order_class="excluded")  # 缺上游美元：金额不计、计数
     add_order(db, "O6", "2026-10-02", "2026-10-02 11:00:00", "MXN", "800",
-              language="es-MX", usd_minor="453")
+              language="es-MX", usd_minor="453", order_class="included")
     add_order(db, "O7", "2026-10-01", "2026-10-01 13:00:00", "EUR", "200",
-              language="fr-FR", usd_minor="220", refund_time="2026-10-03 09:00:00")
+              language="fr-FR", usd_minor="220", refund_time="2026-10-03 09:00:00",
+              order_class="excluded")
     db.add_all(
         [
             AdRevenueDaily(date=date(2026, 10, 1), amount_minor=Decimal("17144")),
@@ -67,25 +79,40 @@ def seed_golden(db) -> None:
     db.commit()
 
 
-def test_golden_fixture_kpis_and_daily(db_session):
+def test_golden_fixture_new_kpis(db_session):
+    """新口径 KPI（REQ-20261014-01）：含退款、缺 usd 排除金额。"""
+    seed_golden(db_session)
+    k = build_summary(db_session, date(2026, 10, 1), date(2026, 10, 2)).kpis
+
+    # 订单总数/完成/退款（含退款单、含缺 usd）
+    assert (k.orders_total, k.orders_completed, k.orders_returned) == (7, 6, 1)
+    # total = 270+1100+1500+144+453+220(退款O7) = 3687（O5 缺 usd 不计）
+    assert k.total_usd == "36.87"
+    assert k.no_usd_order_count == 1
+    # 分成 = 3687 × 0.7 = 2580.9
+    assert k.my_share_usd == "25.81"
+    # 应付理论 = 3687 × 0.5 = 1843.5；实付 = 2223 × 0.5 = 1111.5
+    assert k.supplier_payable_usd == "18.44"
+    assert k.supplier_paid_usd == "11.12"
+    # 差值 = 1843.5 − 1111.5 = 732
+    assert k.hidden_saving_usd == "7.32"
+    # 应得净利 = 2580.9 − 1843.5 = 737.4；实际净利 = 2580.9 − 1111.5 = 1469.4
+    assert k.net_expected_usd == "7.37"
+    assert k.net_actual_usd == "14.69"
+    # 已退款总额 = 220（退款单照常参与全部统计）
+    assert k.refunded_usd == "2.20"
+    # 合并卡：included 3 笔 2223；excluded 4 笔 1464（O5 无 usd 只计数）
+    assert (k.included.count, k.included.usd) == (3, "22.23")
+    assert (k.excluded.count, k.excluded.usd) == (4, "14.64")
+    # 广告沿用
+    assert (k.ad_total, k.ad_days_reported) == ("176.44", 2)
+    assert (k.countries, k.top_country) == (4, "US")
+
+
+def test_golden_fixture_kpis_daily_legacy_caliber(db_session):
+    """旧口径每日/对比/国家卡：退款剔除行为不变（回归护栏）。"""
     seed_golden(db_session)
     summary = build_summary(db_session, date(2026, 10, 1), date(2026, 10, 2))
-
-    # B1 降级键在位、值 null（AC-K2/K3/D3）
-    assert summary.degraded.share_rules_pending is True
-    assert summary.kpis.included_revenue is None
-    assert summary.kpis.excluded_revenue is None
-
-    # gross = Σ usd（缺 usd 与退款单不计入）：270+1100+1500+144+453 = 3467
-    assert summary.kpis.orders_gross_usd == "34.67"
-    assert summary.kpis.gross_usd == "34.67"
-    assert summary.kpis.ad_total == "176.44"
-    assert summary.kpis.total_revenue == "211.11"
-    assert summary.kpis.orders_completed == 6
-    assert summary.kpis.orders_returned == 1
-    assert summary.kpis.countries == 4
-    assert summary.kpis.top_country == "US"
-    assert summary.kpis.ad_days_reported == 2
 
     # 每日双口径（含退款排除 / est 只认静态汇率）
     assert summary.daily.days == ["2026-10-01", "2026-10-02"]
@@ -105,12 +132,18 @@ def test_golden_fixture_kpis_and_daily(db_session):
         ("USD", "15.00"), ("EUR", "11.70"), ("MXN", "2.70")
     ]
     assert est_d2.total == "1.87"  # 1.44 + 0.432（BHD 无汇率不计入）
-    assert [(c.currency, c.amount) for c in est_d2.by_currency] == [
-        ("KRW", "1.44"), ("MXN", "0.43")
-    ]
     assert [(a.date, a.amount) for a in summary.daily.ad] == [
         ("2026-10-01", "171.44"), ("2026-10-02", "5.00")
     ]
+
+    # 国家：缺 usd（BH）与退款单不进分布
+    countries = summary.countries
+    assert [row.key for row in countries.table] == ["US", "FR", "MX", "KR"]
+    us, fr, mx, kr = countries.table
+    assert (us.usd, us.orders, us.share) == ("15.00", 1, "43.3")
+    assert (fr.usd, fr.share) == ("11.00", "31.7")
+    assert (mx.usd, mx.orders, mx.share) == ("7.23", 2, "20.9")
+    assert (kr.usd, kr.share) == ("1.44", "4.2")
 
 
 def test_golden_fixture_conv_card(db_session):
@@ -144,28 +177,67 @@ def test_golden_fixture_conv_card(db_session):
     )
     assert conv.agree is False
     assert conv.no_rate_currencies == ["BHD"]
-    assert conv.no_usd_order_count == 1  # O5
+    assert conv.no_usd_order_count == 1  # O5（已完成口径）
     assert conv.no_usd_currencies == ["BHD"]
     # 环图切片：5 币 ≤ 7 → 全量、无 __other
     assert [s.key for s in conv.slices] == ["USD", "EUR", "MXN", "KRW", "BHD"]
     assert (conv.slices[2].legacy_usd, conv.slices[2].server_usd) == ("3.13", "7.23")
 
 
-def test_golden_fixture_countries(db_session):
+def test_dataset_included_scopes_rows_and_cards(db_session):
+    """class=included：行集只剩已计入；应付理论/差值/应得净利/合并卡 → None。"""
     seed_golden(db_session)
-    countries = build_summary(db_session, date(2026, 10, 1), date(2026, 10, 2)).countries
+    summary = build_summary(
+        db_session, date(2026, 10, 1), date(2026, 10, 2), "included"
+    )
+    k = summary.kpis
+    # 行集 = O1/O3/O6：total = 270+1500+453 = 2223
+    assert (k.orders_total, k.orders_completed, k.orders_returned) == (3, 3, 0)
+    assert k.total_usd == "22.23"
+    assert k.my_share_usd == "15.56"  # 2223 × 0.7 = 1556.1
+    assert k.supplier_paid_usd == "11.12"  # 2223 × 0.5 = 1111.5
+    assert k.net_actual_usd == "4.45"  # 1556.1 − 1111.5 = 444.6
+    assert k.refunded_usd == "0.00"
+    assert k.no_usd_order_count == 0
+    # 不适用卡片
+    assert k.supplier_payable_usd is None
+    assert k.hidden_saving_usd is None
+    assert k.net_expected_usd is None
+    assert k.included is None and k.excluded is None
+    # 广告照常（渠道级，不随数据集收窄）
+    assert k.ad_total == "176.44"
+    # 旧口径卡随数据集收窄：每日只剩已计入的 3 笔
+    assert summary.daily.usd[0].orders == 2  # O1 + O3
+    assert summary.daily.usd[1].orders == 1  # O6
+    assert summary.countries.table[0].key == "US"
 
-    # 缺 usd（BH）与退款单不进国家分布；按毛额 USD 降序
-    assert [row.key for row in countries.table] == ["US", "FR", "MX", "KR"]
-    us, fr, mx, kr = countries.table
-    assert (us.usd, us.orders, us.share) == ("15.00", 1, "43.3")
-    assert [(c.currency, c.amount) for c in us.by_currency] == [("USD", "15.00")]
-    assert (fr.usd, fr.share) == ("11.00", "31.7")
-    assert (mx.usd, mx.orders, mx.share) == ("7.23", 2, "20.9")
-    assert [(c.currency, c.amount) for c in mx.by_currency] == [("MXN", "58.00")]
-    assert (kr.usd, kr.share) == ("1.44", "4.2")
-    # 4 行 < 9 → bars 无折叠
-    assert [b.key for b in countries.bars] == ["US", "FR", "MX", "KR"]
+
+def test_dataset_excluded_scopes_rows_and_cards(db_session):
+    """class=excluded：供应商侧全部不适用（净利=分成，不重复展示）。"""
+    seed_golden(db_session)
+    summary = build_summary(
+        db_session, date(2026, 10, 1), date(2026, 10, 2), "excluded"
+    )
+    k = summary.kpis
+    # 行集 = O2/O4/O5/O7：total = 1100+144+220 = 1464（O5 缺 usd）
+    assert (k.orders_total, k.orders_completed, k.orders_returned) == (4, 3, 1)
+    assert k.total_usd == "14.64"
+    assert k.my_share_usd == "10.25"  # 1464 × 0.7 = 1024.8
+    assert k.refunded_usd == "2.20"  # O7
+    assert k.no_usd_order_count == 1  # O5
+    for none_card in (
+        k.supplier_payable_usd,
+        k.supplier_paid_usd,
+        k.hidden_saving_usd,
+        k.net_expected_usd,
+        k.net_actual_usd,
+        k.included,
+        k.excluded,
+    ):
+        assert none_card is None
+    # 每日只剩剔除单中的已完成：10-01 O2、10-02 O4
+    assert summary.daily.usd[0].orders == 1
+    assert summary.daily.usd[1].orders == 1
 
 
 def test_golden_fixture_meta_and_zero_day_padding(db_session):
@@ -185,11 +257,15 @@ def test_golden_fixture_meta_and_zero_day_padding(db_session):
 
 def test_empty_range_shape(db_session):
     summary = build_summary(db_session, date(2026, 10, 1), date(2026, 10, 1))
-    assert summary.kpis.total_revenue == "0.00"
-    assert summary.kpis.orders_completed == 0
+    k = summary.kpis
+    assert k.total_usd == "0.00"
+    assert k.my_share_usd == "0.00"
+    assert k.supplier_payable_usd == "0.00"
+    assert k.orders_completed == 0
+    assert k.included is not None and k.included.count == 0 and k.included.usd == "0.00"
     assert summary.conv.empty is True
     assert summary.countries.table == []
-    assert summary.kpis.top_country is None
+    assert k.top_country is None
 
 
 # ---------- 折叠派生（§4.1：全部后端预计算，前端零金额求和） ----------
@@ -205,6 +281,7 @@ def seed_many(db, count: int) -> None:
             str((count - i) * 100),  # 原币面额同额（native 排序同序）
             language=f"xx-{letters[i]}{letters[i]}",
             usd_minor=str((count - i) * 100),
+            order_class="included" if i % 2 == 0 else "excluded",
         )
     db.commit()
 

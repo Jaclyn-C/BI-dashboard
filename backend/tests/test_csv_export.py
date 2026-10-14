@@ -47,6 +47,7 @@ def add_order(
     refund_time: str | None = None,
     theater_id: str = "TH",
     promotion_code: str | None = None,
+    order_class: str | None = None,
 ) -> None:
     from app.models import Order
 
@@ -64,19 +65,22 @@ def add_order(
             refund_time=refund_time,
             is_returned=refund_time is not None,
             promotion_code=promotion_code,
+            order_class=order_class,
         )
     )
 
 
 def seed_csv_orders(db) -> None:
     add_order(db, "A", "2026-10-01 10:00:00", "MXN", "5000",
-              usd_minor="270", promotion_code="=SUM(A1)")  # 注入探针
+              usd_minor="270", promotion_code="=SUM(A1)", order_class="included")
     add_order(db, "B", "2026-10-01 11:00:00", "EUR", "1000",
-              usd_minor="1100", language="fr-FR", theater_id="a,b")  # 逗号探针
+              usd_minor="1100", language="fr-FR", theater_id="a,b",
+              order_class="excluded")  # 逗号探针
     add_order(db, "C", "2026-10-02 09:00:00", "BHD", "700",
-              usd_minor=None, language=None)  # 缺 usd + 未知国家
+              usd_minor=None, language=None, order_class="excluded")  # 缺 usd + 未知国家
     add_order(db, "D", "2026-10-02 10:00:00", "USD", "900",
-              usd_minor="900", language="en-US", refund_time="2026-10-03 09:00:00")
+              usd_minor="900", language="en-US", refund_time="2026-10-03 09:00:00",
+              order_class="included")
     db.commit()
 
 
@@ -157,9 +161,10 @@ def test_orders_csv_en(client, auth, db_session):
     parsed = list(csv.reader(io.StringIO(text)))
     rows = {row[0]: row for row in parsed[1:]}
     assert all(len(row) == 14 for row in parsed)
-    # B1：class/revShare/earningsUsd 三列空（AC-X3）
+    # class 列填冻结词；revShare/earningsUsd 仍空（REQ-20261014-01）
+    assert rows["A"][9] == "Included" and rows["B"][9] == "Excluded"
     for cols in rows.values():
-        assert cols[9:12] == ["", "", ""]
+        assert cols[10:12] == ["", ""]
     # 金额两位小数；estUsd = usd 主单位、缺失空（AC-X2）
     assert rows["A"][7] == "50.00" and rows["A"][8] == "2.70"
     assert rows["C"][8] == ""  # 缺 usd

@@ -1,17 +1,16 @@
-"""CSV 导出（DESIGN-20261012-02 §5.4；REQ AC-X1–X4）。
+"""CSV 导出（DESIGN-20261012-02 §5.4；class 列填值 REQ-20261014-01）。
 
 流式生成（yield_per 服务端游标 + 分块拼接），行为逐条对齐 HTML
 ordersToCsv()/csvCell()/downloadCsv()：
 - UTF-8 **BOM** 首块（Excel 不乱码）；**CRLF** 行连接、无行尾 CRLF；
 - 14 列表头 en/zh 逐字冻结（HTML csvHeaders，不得改动）；
-- B1：class/revShare/earningsUsd 三列空值（AC-X3）；dataset 恒 all →
+- class 列填已计入/被剔除（REQ-20261014-01）；revShare/earningsUsd 两列空
+  （旧 20%/70% 口径死列，新口径 per-order 分成未定义，宁空勿造）；
   文件名 orders_all_{from}_to_{to}.csv（两档同名，AC-X2，§4.6-4）；
 - 防公式注入：值以 ``= + - @ \\t \\r`` 开头前置 ``'``；含 ``",\\n\\r``
   引号包裹并双写内部引号（HTML csvCell 逐条移植）；
 - country：babel CLDR 按 lang 本地化（未知 → Unknown/未知，无条目回退原 key）；
 - status：冻结小词表 Completed/Returned ↔ 已完成/已退款。
-
-⚠️ 本模块禁止 import share_service（B1 红线，B-T4/B-T9 grep 断言）。
 """
 
 import re
@@ -22,6 +21,7 @@ from typing import Any
 from babel import Locale
 
 from app.models import Order
+from app.schemas.dashboard import ClassFilter
 from app.services.aggregation import UNKNOWN_COUNTRY_KEY, country_key
 from app.services.money import money_str
 from app.services.orders_query import apply_sort, orders_query
@@ -44,6 +44,12 @@ CSV_HEADERS: dict[str, list[str]] = {
 STATUS_WORDS: dict[str, dict[str, str]] = {
     "en": {"completed": "Completed", "returned": "Returned"},
     "zh": {"completed": "已完成", "returned": "已退款"},
+}
+
+#: 类别冻结词表（REQ-20261014-01；回填后 tag 恒有值，NULL 防御输出空串）
+CLASS_WORDS: dict[str, dict[str, str]] = {
+    "en": {"included": "Included", "excluded": "Excluded"},
+    "zh": {"included": "已计入", "excluded": "被剔除"},
 }
 
 #: 未知国家文案（HTML unknownCountry）
@@ -86,8 +92,9 @@ def country_display(key: str, lang: str) -> str:
 
 
 def _row_values(order: Order, lang: str) -> list[str]:
-    """一行 14 列原始值（class/revShare/earningsUsd 三列空，AC-X3）。"""
+    """一行 14 列原始值（class 列填值；revShare/earningsUsd 空列，REQ-20261014-01）。"""
     status = "returned" if order.is_returned else "completed"
+    class_word = CLASS_WORDS[lang].get(order.order_class or "", "")
     return [
         order.order_id or "",
         order.create_time or "",
@@ -102,9 +109,9 @@ def _row_values(order: Order, lang: str) -> list[str]:
             if order.usd_order_amount_minor is not None
             else ""
         ),
-        "",  # class —— B1 空列（规则未确认，宁空勿猜）
-        "",  # revShare —— B1 空列
-        "",  # earningsUsd —— B1 空列
+        class_word,
+        "",  # revShare —— 旧口径死列（宁空勿造）
+        "",  # earningsUsd —— 旧口径死列（宁空勿造）
         STATUS_WORDS[lang][status],
         order.promotion_code or "",
     ]
@@ -123,6 +130,7 @@ def iter_csv_chunks(
     scope: str = "view",
     currency: str = "all",
     status: str = "all",
+    order_class: ClassFilter = "all",
     sort: str = "date",
     direction: str = "desc",
     lang: str = "en",
@@ -136,7 +144,13 @@ def iter_csv_chunks(
         stmt = apply_sort(orders_query(date_from, date_to), "date", "desc")
     else:
         stmt = apply_sort(
-            orders_query(date_from, date_to, currency=currency, status=status),
+            orders_query(
+                date_from,
+                date_to,
+                currency=currency,
+                status=status,  # type: ignore[arg-type]
+                order_class=order_class,
+            ),
             sort,  # type: ignore[arg-type]
             direction,  # type: ignore[arg-type]
         )

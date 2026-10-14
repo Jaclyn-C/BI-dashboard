@@ -1,6 +1,6 @@
 """订单明细查询构造（DESIGN-20261012-02 §5.3；订单表与 CSV 共用）。
 
-筛选（币种/状态）+ 排序（时间/币种/金额/美元）在 SQL 完成：
+筛选（类别/币种/状态）+ 排序（时间/币种/金额/美元）在 SQL 完成：
 - date → create_time（字符串字典序 = 时间序，AC-S8）；
 - usd → coalesce(usd, -1)（HTML null→-1 语义，AC-O3）；
 - 末位统一追加 order_id 决定性 tiebreak。
@@ -11,7 +11,7 @@ from datetime import date
 from sqlalchemy import Select, func, select
 
 from app.models import Order
-from app.schemas.dashboard import TABLE_PAGE_SIZE, SortDir, SortKey, StatusFilter
+from app.schemas.dashboard import TABLE_PAGE_SIZE, ClassFilter, SortDir, SortKey, StatusFilter
 
 #: 排序键 → 表达式（DESIGN §5.3）
 _SORT_COLUMNS = {
@@ -28,8 +28,9 @@ def orders_query(
     *,
     currency: str = "all",
     status: StatusFilter = "all",
+    order_class: ClassFilter = "all",
 ) -> Select:
-    """区间 + 筛选的基础查询（未排序未分页；B1 无 class 筛选参数，§5.7）。"""
+    """区间 + 筛选的基础查询（未排序未分页）。class 筛选 REQ-20261014-01 §六。"""
     stmt = select(Order).where(Order.create_date >= date_from, Order.create_date <= date_to)
     if currency and currency != "all":
         stmt = stmt.where(Order.currency_type == currency)
@@ -37,6 +38,8 @@ def orders_query(
         stmt = stmt.where(Order.is_returned.is_(False))
     elif status == "returned":
         stmt = stmt.where(Order.is_returned.is_(True))
+    if order_class != "all":
+        stmt = stmt.where(Order.order_class == order_class)
     return stmt
 
 

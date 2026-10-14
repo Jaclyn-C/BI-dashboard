@@ -1,7 +1,9 @@
-"""看板入出参契约（DESIGN-20261012-02 §5，REQ-20261012-02）。
+"""看板入出参契约（DESIGN-20261012-02 §5；KPI 口径 REQ-20261014-01）。
 
 §5 是前后端并行的唯一真源：字段名、形状、金额字符串口径（主单位 2 位小数，
-DESIGN §2.5）以此为准。B1 降级契约（§4.3）：分成相关键保留、值 null。
+DESIGN §2.5）以此为准。KPI 新口径：金额卡基数 = 上游自报美元、退款单照常
+参与；数据集切换（summary/orders 的 class 参数）下不适用卡片的值为 null
+（前端不渲染该卡）。
 """
 
 from datetime import date
@@ -18,6 +20,7 @@ TABLE_PAGE_SIZE = 25
 SortKey = Literal["date", "currency", "amount", "usd"]
 SortDir = Literal["asc", "desc"]
 StatusFilter = Literal["all", "completed", "returned"]
+ClassFilter = Literal["all", "included", "excluded"]
 CsvScope = Literal["view", "all"]
 CsvLang = Literal["en", "zh"]
 
@@ -42,24 +45,39 @@ class SummaryMeta(BaseModel):
     ad_error: str | None
 
 
-class Degraded(BaseModel):
-    """B1 降级顶层标志（规则接入后置 false 并最终移除，§5.7）。"""
+class ClassCountAmount(BaseModel):
+    """合并卡的半边：某类订单的数量与原金额（USD）合计。"""
 
-    share_rules_pending: bool = True
+    count: int
+    usd: str
 
 
 class KpisOut(BaseModel):
-    total_revenue: str  # B1：毛额口径 = orders_gross_usd + ad_total（AC-K1）
-    orders_gross_usd: str
-    ad_total: str
-    included_revenue: str | None = None  # B1 恒 null（AC-K2）
-    excluded_revenue: str | None = None  # B1 恒 null（AC-K3）
-    gross_usd: str  # AC-K5（B1 与 orders_gross_usd 同值）
+    """REQ-20261014-01 新口径 KPI（金额=上游自报美元主单位字符串；退款单参与）。
+
+    数据集切换（summary?class=）下不适用卡片的值为 None（前端不渲染）：
+    included 视图 → supplier_payable/hidden_saving/net_expected/included/excluded
+    为 None；excluded 视图再增 supplier_paid/net_actual 为 None。
+    """
+
+    orders_total: int
     orders_completed: int
     orders_returned: int
+    total_usd: str
+    my_share_usd: str
+    supplier_payable_usd: str | None
+    supplier_paid_usd: str | None
+    hidden_saving_usd: str | None
+    net_expected_usd: str | None
+    net_actual_usd: str | None
+    refunded_usd: str
+    included: ClassCountAmount | None
+    excluded: ClassCountAmount | None
+    ad_total: str
+    ad_days_reported: int
     countries: int
     top_country: str | None
-    ad_days_reported: int
+    no_usd_order_count: int
 
 
 class CurrencyAmount(BaseModel):
@@ -146,7 +164,6 @@ class CountriesOut(BaseModel):
 class SummaryResponse(BaseModel):
     range: RangeOut
     meta: SummaryMeta
-    degraded: Degraded
     kpis: KpisOut
     daily: DailyOut
     conv: ConvOut

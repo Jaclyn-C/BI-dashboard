@@ -436,6 +436,7 @@ def build_summary(
     kpi_hidden: str | None
     kpi_net_expected: str | None
     kpi_net_actual: str | None
+    kpi_total_net_actual: str | None
     kpi_included: ClassCountAmount | None
     kpi_excluded: ClassCountAmount | None
     if order_class == "all":
@@ -445,7 +446,11 @@ def build_summary(
         kpi_paid = money_str(paid_minor)
         kpi_hidden = money_str(share_service.hidden_saving(payable_minor, paid_minor))
         kpi_net_expected = money_str(share_service.net_expected(my_share_minor, payable_minor))
-        kpi_net_actual = money_str(share_service.net_actual(my_share_minor, paid_minor))
+        net_actual_minor = share_service.net_actual(my_share_minor, paid_minor)
+        kpi_net_actual = money_str(net_actual_minor)
+        kpi_total_net_actual = money_str(
+            share_service.total_net_actual(net_actual_minor, ad_total_minor)
+        )
         kpi_included = ClassCountAmount(
             count=included_count, usd=money_str(included_usd_minor)
         )
@@ -459,7 +464,11 @@ def build_summary(
         kpi_paid = money_str(paid_minor)
         kpi_hidden = None
         kpi_net_expected = None
-        kpi_net_actual = money_str(share_service.net_actual(my_share_minor, paid_minor))
+        net_actual_minor = share_service.net_actual(my_share_minor, paid_minor)
+        kpi_net_actual = money_str(net_actual_minor)
+        kpi_total_net_actual = money_str(
+            share_service.total_net_actual(net_actual_minor, ad_total_minor)
+        )
         kpi_included = None
         kpi_excluded = None
     else:  # excluded：供应商侧全部不适用；实际净利 = 分成（与分成卡同值，不重复展示）
@@ -468,6 +477,7 @@ def build_summary(
         kpi_hidden = None
         kpi_net_expected = None
         kpi_net_actual = None
+        kpi_total_net_actual = None
         kpi_included = None
         kpi_excluded = None
 
@@ -494,6 +504,7 @@ def build_summary(
             hidden_saving_usd=kpi_hidden,
             net_expected_usd=kpi_net_expected,
             net_actual_usd=kpi_net_actual,
+            total_net_actual_usd=kpi_total_net_actual,
             refunded_usd=money_str(refunded_usd_minor),
             included=kpi_included,
             excluded=kpi_excluded,

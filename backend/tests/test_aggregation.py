@@ -99,6 +99,8 @@ def test_golden_fixture_new_kpis(db_session):
     # 应得净利 = 2580.9 − 1843.5 = 737.4；实际净利 = 2580.9 − 1111.5 = 1469.4
     assert k.net_expected_usd == "7.37"
     assert k.net_actual_usd == "14.69"
+    # 总实际净利润 = 1469.4 + 17644（广告） = 19113.4
+    assert k.total_net_actual_usd == "191.13"
     # 已退款总额 = 220（退款单照常参与全部统计）
     assert k.refunded_usd == "2.20"
     # 合并卡：included 3 笔 2223；excluded 4 笔 1464（O5 无 usd 只计数）
@@ -197,6 +199,7 @@ def test_dataset_included_scopes_rows_and_cards(db_session):
     assert k.my_share_usd == "15.56"  # 2223 × 0.7 = 1556.1
     assert k.supplier_paid_usd == "11.12"  # 2223 × 0.5 = 1111.5
     assert k.net_actual_usd == "4.45"  # 1556.1 − 1111.5 = 444.6
+    assert k.total_net_actual_usd == "180.89"  # 444.6 + 17644 = 18088.6
     assert k.refunded_usd == "0.00"
     assert k.no_usd_order_count == 0
     # 不适用卡片
@@ -231,6 +234,7 @@ def test_dataset_excluded_scopes_rows_and_cards(db_session):
         k.hidden_saving_usd,
         k.net_expected_usd,
         k.net_actual_usd,
+        k.total_net_actual_usd,
         k.included,
         k.excluded,
     ):
@@ -260,6 +264,7 @@ def test_empty_range_shape(db_session):
     k = summary.kpis
     assert k.total_usd == "0.00"
     assert k.my_share_usd == "0.00"
+    assert k.total_net_actual_usd == "0.00"
     assert k.supplier_payable_usd == "0.00"
     assert k.orders_completed == 0
     assert k.included is not None and k.included.count == 0 and k.included.usd == "0.00"

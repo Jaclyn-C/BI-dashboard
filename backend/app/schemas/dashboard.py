@@ -70,6 +70,7 @@ class KpisOut(BaseModel):
     hidden_saving_usd: str | None
     net_expected_usd: str | None
     net_actual_usd: str | None
+    total_net_actual_usd: str | None  # 总实际净利润 = 实际净利润 + 广告收入
     refunded_usd: str
     included: ClassCountAmount | None
     excluded: ClassCountAmount | None

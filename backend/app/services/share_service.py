@@ -49,3 +49,8 @@ def net_expected(
 def net_actual(my_share_minor: Decimal, paid_actual_minor: Decimal) -> Decimal:
     """实际净利润 = 你的分成 − 供应商实付。"""
     return my_share_minor - paid_actual_minor
+
+
+def total_net_actual(net_actual_minor: Decimal, ad_total_minor: Decimal) -> Decimal:
+    """总实际净利润 = 实际净利润 + 广告收入（订单侧落袋 + 渠道广告收益）。"""
+    return net_actual_minor + ad_total_minor

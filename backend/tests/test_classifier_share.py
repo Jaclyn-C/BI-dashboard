@@ -28,6 +28,7 @@ from app.services.share_service import (
     net_expected,
     supplier_paid_actual,
     supplier_payable_theoretical,
+    total_net_actual,
 )
 
 SALT = "unit-test-salt"
@@ -142,3 +143,4 @@ def test_share_math_uneven_split():
     assert supplier_paid_actual(included_total) == Decimal("1350.00")
     assert hidden_saving(Decimal("1843.50"), Decimal("1350.00")) == Decimal("493.50")
     assert net_actual(Decimal("2580.90"), Decimal("1350.00")) == Decimal("1230.90")
+    assert total_net_actual(Decimal("1230.90"), Decimal("17644")) == Decimal("18874.90")

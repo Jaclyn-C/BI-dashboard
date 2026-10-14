@@ -28,4 +28,10 @@
 
 ## 下游接口（我们提供给供应商的）
 
-- 待需求阶段定义。原则已定：`/api/v1/supplier/**`、API key 鉴权、按供应商隔离、FastAPI OpenAPI（`/docs`）作为对外文档；供应商账号迁移 = B4 待确认
+- 原则已定（REQ-20261014-01）：只返回 `tag = included` 的订单、**只暴露必要字段**（不返回 tag/send_flag 等内部字段）；已计入订单状态随上游同步更新。**本期不实现**，待单独需求（供应商实体/API key/多供应商分配 = B4 待确认）
+- `/api/v1/supplier/**`、API key 鉴权、按供应商隔离、FastAPI OpenAPI（`/docs`）作为对外文档
+
+## 2026-10-14 实测更新（order/list 字段与 adSummary 状态）
+
+- **order/list 实际返回 11 个字段**（此前文档只记 9 个）：新增 `linkId`（归因链接）与 `orderStatus`（2=支付、3=退款——此前只见于老后端 schema）。单日实测 318/318 笔 `orderAmount` 全部有值（BHD/KZT 等小币种也有）
+- **adSummary 当日整体故障**：全部日期/参数格式返回信封错误「系统异常」（traceId 每次不同），同凭据 order/list 正常；库里广告数据最新到 10-13 说明故障为近期发生。降级路径（partial + 横幅 + lookback 自愈）已覆盖，恢复后自动补数

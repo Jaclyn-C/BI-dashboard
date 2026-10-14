@@ -26,11 +26,16 @@ from app.db import Base
 
 
 class Order(Base):
-    """上游 CPS 订单。B1 期间 order_class 恒 NULL（分类器空实现写入，AC-CL1）。"""
+    """上游 CPS 订单。
+
+    order_class（REQ-20261014-01）：入库时经 sha256(salt:order_id) 哈希判定
+    （included=已计入/下发供应商，excluded=剔除/不下发），只写一次、永不改变
+    （sync_service 的 upsert 更新集不含该列）。存量回填见迁移 0003。
+    """
 
     __tablename__ = "orders"
     __table_args__ = (
-        # CHECK 为 B1 恢复预留（规则接入后 same 列出值），无索引（DESIGN §2.1）
+        # tag 合法值约束（存量回填前可为 NULL），无索引（DESIGN §2.1）
         CheckConstraint("order_class IN ('included', 'excluded')", name="order_class_values"),
         Index("ix_orders_create_date", "create_date"),
     )

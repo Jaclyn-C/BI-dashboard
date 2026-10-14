@@ -209,6 +209,10 @@
   gap: 12px;
   margin-bottom: 16px;
 }
+/* 合并卡跨两列：双列金额（如 $25,342.67）需要足够横向空间 */
+.tile.wide {
+  grid-column: span 2;
+}
 @media (max-width: 900px) {
   .kpis {
     grid-template-columns: 1fr 1fr;
@@ -322,6 +326,9 @@
   font-weight: 500;
   margin-top: 2px;
   white-space: nowrap;
+}
+.duo-amount.small {
+  font-size: 15px;
 }
 
 /* ---------- chart cards ---------- */

@@ -125,14 +125,18 @@ export default function KpiSection({ kpis, fmt }) {
               <div className="duo-count">
                 {t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.included.count) })}
               </div>
-              <div className="duo-amount">{money(fmt, kpis.included.usd)}</div>
+              <div className={`duo-amount${String(kpis.included.usd).length >= 10 ? ' small' : ''}`}>
+                {money(fmt, kpis.included.usd)}
+              </div>
             </div>
             <div className="duo-col">
               <div className="duo-label">{t('dashboard.kpiExcludedCol')}</div>
               <div className="duo-count">
                 {t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.excluded.count) })}
               </div>
-              <div className="duo-amount">{money(fmt, kpis.excluded.usd)}</div>
+              <div className={`duo-amount${String(kpis.excluded.usd).length >= 10 ? ' small' : ''}`}>
+                {money(fmt, kpis.excluded.usd)}
+              </div>
             </div>
           </div>
         </Tile>

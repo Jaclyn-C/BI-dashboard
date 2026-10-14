@@ -207,9 +207,6 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
               <span className="pagerof">
                 {t('dashboard.pageIndicator', { n: intNum(fmt, pages) })}
               </span>
-              <button type="button" className="pagebtn wide" onClick={jumpToPage}>
-                {t('dashboard.pageGo')}
-              </button>
             </span>
             <button
               type="button"

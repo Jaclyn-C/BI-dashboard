@@ -678,11 +678,6 @@ th .arrow {
   font-size: 12.5px;
   white-space: nowrap;
 }
-.pagebtn.wide {
-  width: auto;
-  padding: 0 12px;
-  font-size: 12.5px;
-}
 
 .visually-hidden {
   position: absolute;

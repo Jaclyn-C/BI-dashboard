@@ -52,6 +52,7 @@ export default function KpiSection({ kpis, fmt }) {
   const ordersAux = t('dashboard.kpiOrdersAux', {
     n: intNum(fmt, kpis.orders_completed),
     m: intNum(fmt, kpis.orders_returned),
+    k: intNum(fmt, kpis.no_usd_order_count),
   })
 
   return (

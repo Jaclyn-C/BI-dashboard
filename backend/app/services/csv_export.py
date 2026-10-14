@@ -141,7 +141,11 @@ def iter_csv_chunks(
     create_time desc 固定序（AC-X1）。
     """
     if scope == "all":
-        stmt = apply_sort(orders_query(date_from, date_to), "date", "desc")
+        # 数据集 class 仍是外层范围（REQ §3.4：CSV 两档都只含当前数据集）；
+        # scope=all 只忽略表格级筛选（币种/状态/排序），create_time desc 固定序
+        stmt = apply_sort(
+            orders_query(date_from, date_to, order_class=order_class), "date", "desc"
+        )
     else:
         stmt = apply_sort(
             orders_query(

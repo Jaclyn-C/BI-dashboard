@@ -743,7 +743,7 @@ th .arrow {
   margin-left: auto;
 }
 
-/* ---------- included / excluded rows（B1 不渲染，规则恢复后启用，AC-O8） ---------- */
+/* ---------- 剔除行斜纹（REQ-20261014-01 启用，AC-O8） ---------- */
 tbody tr.row-excluded {
   background: repeating-linear-gradient(
     135deg,

@@ -92,7 +92,7 @@
     "csvAll": "全部订单（CSV）",
     "kpiOrdersTotal": "订单总数",
     "kpiOrdersTotalHelp": "上游 API 返回的全部订单总数（含已计入和剔除）。公式：count(全部订单)",
-    "kpiOrdersAux": "已完成 {{n}} · 退款 {{m}}",
+    "kpiOrdersAux": "已完成 {{n}} · 退款 {{m}} · 缺美元 {{k}}",
     "kpiTotalAmount": "订单总金额（美元）",
     "kpiTotalAmountHelp": "所有订单原金额之和，不区分是否隐藏、是否退款。原金额 = 上游自报美元，缺自报美元的订单不计入。公式：Σ 全部订单原金额",
     "kpiMyShare": "你的分成金额（70%）",

@@ -179,7 +179,7 @@ class OrderRow(BaseModel):
     currency: str
     amount: str
     usd: str | None  # 缺失 → null（前端渲染 —）
-    order_class: str | None = None  # B1 恒 null（AC-O1）
+    order_class: str | None = None  # tag 真值（REQ-20261014-01）；NULL 仅存量未回填防御
     status: Literal["completed", "returned"]
 
 

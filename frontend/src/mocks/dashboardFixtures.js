@@ -599,9 +599,10 @@ function csvCell(value) {
 export function buildCsvMock({ from, to, scope = 'view', klass = 'all', currency = 'all', status = 'all', sort = 'date', dir = 'desc', lang = 'en' }) {
   const headers = CSV_HEADERS[lang] || CSV_HEADERS.en
   const classWords = { en: { included: 'Included', excluded: 'Excluded' }, zh: { included: '已计入', excluded: '被剔除' } }
-  // scope=all：区间全部订单（忽略筛选，create_time 降序）；view：套用当前筛选+排序
+  // scope=all：区间内当前数据集全部订单（忽略表格筛选，create_time 降序）；
+  // view：套用当前筛选+排序。数据集 klass 两档都生效（REQ §3.4）
   const rowsAll = scope === 'all'
-    ? paginatedAll({ from, to, klass: 'all', currency: 'all', status: 'all', sort: 'date', dir: 'desc' })
+    ? paginatedAll({ from, to, klass, currency: 'all', status: 'all', sort: 'date', dir: 'desc' })
     : paginatedAll({ from, to, klass, currency, status, sort, dir })
   const lines = [headers.map(csvCell).join(',')]
   for (const o of rowsAll) {

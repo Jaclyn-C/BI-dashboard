@@ -198,6 +198,29 @@ def test_scope_view_applies_filters_and_sort(client, auth, db_session):
     assert [line.split(",")[0] for line in lines[1:]] == ["A"]  # 仅 MXN
 
 
+def test_class_filter_scopes_view_csv(client, auth, db_session):
+    """class 参数收窄行集（REQ-20261014-01 §六）；class 列输出对应冻结词。"""
+    seed_csv_orders(db_session)
+    resp = client.get(
+        f"{API}", params={**RANGE, "scope": "view", "class": "included"}, headers=auth
+    )
+    parsed = list(csv.reader(io.StringIO(resp.content.decode("utf-8"))))
+    rows = {row[0]: row for row in parsed[1:]}  # 首行 = BOM + 表头
+    assert set(rows) == {"A", "D"}  # A/D = included；B/C = excluded
+    assert all(rows[o][9] == "Included" for o in ("A", "D"))
+
+
+def test_scope_all_keeps_dataset_class_filter(client, auth, db_session):
+    """scope=all 保留数据集 class 外层范围（REQ §3.4），只忽略表格级筛选。"""
+    seed_csv_orders(db_session)
+    resp = client.get(
+        f"{API}", params={**RANGE, "scope": "all", "class": "excluded"}, headers=auth
+    )
+    lines = resp.content.decode("utf-8").split("\r\n")
+    # 区间内剔除单 = C(10-02 09) + B(10-01 11)，create_time desc 固定序
+    assert [line.split(",")[0] for line in lines[1:]] == ["C", "B"]
+
+
 def test_scope_all_ignores_filters_fixed_order(client, auth, db_session):
     """scope=all：区间全量、忽略筛选、create_time desc 固定序（AC-X1）。"""
     seed_csv_orders(db_session)

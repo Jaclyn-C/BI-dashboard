@@ -133,7 +133,7 @@ def orders(
                     if row.usd_order_amount_minor is not None
                     else None
                 ),
-                order_class=row.order_class,  # B1 恒 null（AC-O1）
+                order_class=row.order_class,  # tag 真值（REQ-20261014-01）
                 status="returned" if row.is_returned else "completed",
             )
             for row in rows

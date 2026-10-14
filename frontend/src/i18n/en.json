@@ -92,7 +92,7 @@
     "csvAll": "All orders (CSV)",
     "kpiOrdersTotal": "Total orders",
     "kpiOrdersTotalHelp": "All orders returned by the upstream API (included + excluded). Formula: count(all orders)",
-    "kpiOrdersAux": "{{n}} completed · {{m}} returned",
+    "kpiOrdersAux": "{{n}} completed · {{m}} returned · {{k}} no USD",
     "kpiTotalAmount": "Total order amount (USD)",
     "kpiTotalAmountHelp": "Sum of every order's original amount, regardless of hiding or refunds. Original amount = upstream-reported USD; orders without it are excluded. Formula: Σ all order amounts",
     "kpiMyShare": "Your share (70%)",

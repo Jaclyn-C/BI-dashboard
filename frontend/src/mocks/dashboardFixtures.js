@@ -143,8 +143,9 @@ function ordersForDay(date) {
       const hh = Math.floor(hash01(`h|${date}|${i}`) * 24)
       const mm = Math.floor(hash01(`m|${date}|${i}`) * 60)
       const ss = Math.floor(hash01(`s|${date}|${i}`) * 60)
+      const orderId = `R${date.replaceAll('-', '')}${String(i).padStart(5, '0')}`
       rows.push({
-        order_id: `R${date.replaceAll('-', '')}${String(i).padStart(5, '0')}`,
+        order_id: orderId,
         create_time: `${date} ${pad(hh)}:${pad(mm)}:${pad(ss)}`,
         create_date: date,
         country_key: countryKeyOf(lang),
@@ -152,7 +153,8 @@ function ordersForDay(date) {
         currency: cur.code,
         amount: native.toFixed(2),
         usd: usd === null ? null : usd.toFixed(2),
-        order_class: null, // B1：恒 null（AC-CL1）
+        // 模拟后端哈希打标（REQ-20261014-01）：确定性 ~80/20
+        order_class: hash01(`cls|${orderId}`) < 0.8 ? 'included' : 'excluded',
         status: returned ? 'returned' : 'completed',
         refund_time: returned ? `${date} ${pad(Math.min(23, hh + 1))}:${pad(mm)}:${pad(ss)}` : null,
         theater_id: `T${100 + Math.floor(hash01(`t|${date}|${i}`) * 900)}`,
@@ -250,9 +252,11 @@ function sumMapEntries(map) {
   return [...map.entries()].sort((a, b) => b[1] - a[1])
 }
 
-export function getSummaryMock({ from, to }) {
+export function getSummaryMock({ from, to, klass = 'all' }) {
   const days = listDays(from, to)
-  const all = days.flatMap((d) => ordersForDay(d))
+  const scopeAll = days.flatMap((d) => ordersForDay(d))
+  // 数据集切换（REQ-20261014-01）：行集先按 tag 过滤，全部下游口径随之收窄
+  const all = klass === 'all' ? scopeAll : scopeAll.filter((o) => o.order_class === klass)
   const completed = all.filter((o) => o.status === 'completed')
   const returned = all.filter((o) => o.status === 'returned')
 
@@ -262,7 +266,6 @@ export function getSummaryMock({ from, to }) {
   const curUsdTotals = new Map()
   const countries = new Map()
   const convRows = new Map()
-  let grossUsd = 0
   let noUsdOrderCount = 0
   const noUsdCurrencies = new Set()
 
@@ -292,7 +295,6 @@ export function getSummaryMock({ from, to }) {
       e.total += usd
       e.by.set(o.currency, (e.by.get(o.currency) || 0) + usd)
       curUsdTotals.set(o.currency, (curUsdTotals.get(o.currency) || 0) + usd)
-      grossUsd += usd
       // 国家聚合（对标 HTML：仅计有美元金额的已完成订单）
       let c = countries.get(o.country_key)
       if (!c) {
@@ -451,6 +453,39 @@ export function getSummaryMock({ from, to }) {
   const syncStatus = syncMock.state === 'running' ? 'running' : 'ok'
   const truncated = truncatedDates().filter((d) => d >= from && d <= to)
 
+  // 新口径 KPI（REQ-20261014-01）：含退款单、缺 usd 不计金额只计数；
+  // 数据集切换下公式输入不在范围内的卡片为 null（前端不渲染）
+  let totalUsd = 0
+  let includedUsd = 0
+  let excludedUsd = 0
+  let refundedUsd = 0
+  let includedCount = 0
+  let excludedCount = 0
+  let noUsdAllCount = 0
+  for (const o of all) {
+    if (o.order_class === 'included') includedCount += 1
+    else if (o.order_class === 'excluded') excludedCount += 1
+    if (o.usd === null) {
+      noUsdAllCount += 1
+      continue
+    }
+    const v = Number(o.usd)
+    totalUsd += v
+    if (o.order_class === 'included') includedUsd += v
+    else if (o.order_class === 'excluded') excludedUsd += v
+    if (o.status === 'returned') refundedUsd += v
+  }
+  const myShare = totalUsd * 0.7
+  const isAll = klass === 'all'
+  const payable = totalUsd * 0.5
+  const paidActual = isAll ? includedUsd * 0.5 : totalUsd * 0.5
+  const mergedCard = isAll
+    ? {
+        included: { count: includedCount, usd: round2(includedUsd) },
+        excluded: { count: excludedCount, usd: round2(excludedUsd) },
+      }
+    : { included: null, excluded: null }
+
   return {
     range: { from, to },
     meta: {
@@ -463,19 +498,25 @@ export function getSummaryMock({ from, to }) {
       ad_available: true,
       ad_error: null,
     },
-    degraded: { share_rules_pending: true },
     kpis: {
-      total_revenue: round2(grossUsd + adTotal),
-      orders_gross_usd: round2(grossUsd),
-      ad_total: round2(adTotal),
-      included_revenue: null, // B1（AC-K2）
-      excluded_revenue: null, // B1（AC-K3）
-      gross_usd: round2(grossUsd),
+      orders_total: all.length,
       orders_completed: completed.length,
       orders_returned: returned.length,
+      total_usd: round2(totalUsd),
+      my_share_usd: round2(myShare),
+      supplier_payable_usd: isAll ? round2(payable) : null,
+      supplier_paid_usd: klass === 'excluded' ? null : round2(paidActual),
+      hidden_saving_usd: isAll ? round2(payable - paidActual) : null,
+      net_expected_usd: isAll ? round2(myShare - payable) : null,
+      net_actual_usd: klass === 'excluded' ? null : round2(myShare - paidActual),
+      refunded_usd: round2(refundedUsd),
+      included: mergedCard.included,
+      excluded: mergedCard.excluded,
+      ad_total: round2(adTotal),
+      ad_days_reported: adDays,
       countries: countries.size,
       top_country: countryTable.length ? countryTable[0].key : null,
-      ad_days_reported: adDays,
+      no_usd_order_count: noUsdAllCount,
     },
     daily: {
       days,
@@ -503,10 +544,11 @@ export function getSummaryMock({ from, to }) {
 
 // ---------------- 订单分页（DESIGN §5.3） ----------------
 
-export function getOrdersMock({ from, to, currency = 'all', status = 'all', sort = 'date', dir = 'desc', page = 1 }) {
+export function getOrdersMock({ from, to, klass = 'all', currency = 'all', status = 'all', sort = 'date', dir = 'desc', page = 1 }) {
   const all = listDays(from, to).flatMap((d) => ordersForDay(d))
   const currencies = [...new Set(all.map((o) => o.currency))].sort()
   let rows = all
+  if (klass !== 'all') rows = rows.filter((o) => o.order_class === klass)
   if (currency !== 'all') rows = rows.filter((o) => o.currency === currency)
   if (status === 'completed') rows = rows.filter((o) => o.status === 'completed')
   else if (status === 'returned') rows = rows.filter((o) => o.status === 'returned')
@@ -554,12 +596,13 @@ function csvCell(value) {
   return /[",\n\r]/.test(safe) ? '"' + safe.replace(/"/g, '""') + '"' : safe
 }
 
-export function buildCsvMock({ from, to, scope = 'view', currency = 'all', status = 'all', sort = 'date', dir = 'desc', lang = 'en' }) {
+export function buildCsvMock({ from, to, scope = 'view', klass = 'all', currency = 'all', status = 'all', sort = 'date', dir = 'desc', lang = 'en' }) {
   const headers = CSV_HEADERS[lang] || CSV_HEADERS.en
+  const classWords = { en: { included: 'Included', excluded: 'Excluded' }, zh: { included: '已计入', excluded: '被剔除' } }
   // scope=all：区间全部订单（忽略筛选，create_time 降序）；view：套用当前筛选+排序
   const rowsAll = scope === 'all'
-    ? paginatedAll({ from, to, currency: 'all', status: 'all', sort: 'date', dir: 'desc' })
-    : paginatedAll({ from, to, currency, status, sort, dir })
+    ? paginatedAll({ from, to, klass: 'all', currency: 'all', status: 'all', sort: 'date', dir: 'desc' })
+    : paginatedAll({ from, to, klass, currency, status, sort, dir })
   const lines = [headers.map(csvCell).join(',')]
   for (const o of rowsAll) {
     lines.push([
@@ -572,9 +615,9 @@ export function buildCsvMock({ from, to, scope = 'view', currency = 'all', statu
       o.currency,
       Number(o.amount).toFixed(2),
       o.usd === null ? '' : Number(o.usd).toFixed(2),
-      '', // class（B1 留空，AC-X3）
-      '', // revShare（B1 留空）
-      '', // earningsUsd（B1 留空）
+      o.order_class ? classWords[lang][o.order_class] : '',
+      '', // revShare（旧口径死列，REQ-20261014-01）
+      '', // earningsUsd（旧口径死列）
       o.status === 'returned' ? CSV_STATUS[lang].returned : CSV_STATUS[lang].completed,
       o.promotion_code,
     ].map(csvCell).join(','))
@@ -582,10 +625,11 @@ export function buildCsvMock({ from, to, scope = 'view', currency = 'all', statu
   return { filename: `orders_all_${from}_to_${to}.csv`, text: lines.join('\r\n') }
 }
 
-function paginatedAll({ from, to, currency, status, sort, dir }) {
+function paginatedAll({ from, to, klass, currency, status, sort, dir }) {
   // 取全量筛选行（绕过分页）：直接复用 getOrdersMock 的筛选逻辑
   const all = listDays(from, to).flatMap((d) => ordersForDay(d))
   let rows = all
+  if (klass !== 'all') rows = rows.filter((o) => o.order_class === klass)
   if (currency !== 'all') rows = rows.filter((o) => o.currency === currency)
   if (status === 'completed') rows = rows.filter((o) => o.status === 'completed')
   else if (status === 'returned') rows = rows.filter((o) => o.status === 'returned')

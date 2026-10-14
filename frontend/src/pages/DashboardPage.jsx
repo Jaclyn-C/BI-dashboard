@@ -1,11 +1,11 @@
 // ============================================================
 // DashboardPage.jsx — 看板页状态中枢（DESIGN §6.1/§6.3，F-T3/F-T9）
-// 持有 range/dailyView/filters/sort/page，向下纯受控分发；
+// 持有 range/dataset/dailyView/filters/sort/page，向下纯受控分发；
 // useSummary/useOrders/useSyncStatus 三 hook 供数（S8，无状态库）。
 // 状态行（AC-S1/S2/S4 + D5 常驻注记）、五横幅（AC-S5/S7/S9/C8）、
 // CSV 双档（AC-X1）、↻ 手动同步（AC-S3/S4）、币种失效回落（AC-O2）、
-// B1 全链降级（§6.8）。金额零运算：展示值全为后端字符串
-// （Number 仅图表几何，硬约束 3）。
+// 数据集全局切换（REQ-20261014-01：class 透传 summary/orders/CSV）。
+// 金额零运算：展示值全为后端字符串（Number 仅图表几何，硬约束 3）。
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -41,8 +41,9 @@ export default function DashboardPage() {
 
   // ---- 页面状态（DESIGN §6.3）----
   const [range, setRange] = useState(() => presetRange('7d')) // AC-T2：默认近 7 天
+  const [dataset, setDataset] = useState('all') // REQ-20261014-01：数据集全局切换
   const [dailyView, setDailyView] = useState('chart') // AC-E1：双卡共享
-  const [filters, setFilters] = useState({ currency: 'all', status: 'all' })
+  const [filters, setFilters] = useState({ klass: 'all', currency: 'all', status: 'all' })
   const [sort, setSort] = useState({ key: 'date', dir: 'desc' }) // AC-O3 默认
   const [page, setPage] = useState(1)
   const [csvBusy, setCsvBusy] = useState(false)
@@ -52,11 +53,15 @@ export default function DashboardPage() {
   const locale = i18n.language === 'zh' ? 'zh-CN' : 'en-US'
   const fmt = useMemo(() => buildFormatters(locale), [locale])
 
+  // 数据集是外层范围；表格类别筛选在其内细化（all = 跟随数据集，REQ-20261014-01）
+  const effectiveClass = filters.klass !== 'all' ? filters.klass : dataset
+
   // ---- 数据（S8 hooks；loading 期间保留上一帧 → loadingdim）----
-  const summary = useSummary(range)
+  const summary = useSummary(range, dataset)
   const orders = useOrders({
     from: range.from,
     to: range.to,
+    klass: effectiveClass,
     currency: filters.currency,
     status: filters.status,
     sortKey: sort.key,
@@ -87,7 +92,7 @@ export default function DashboardPage() {
     }
   }, [orderCurrencies, filters.currency])
 
-  // ---- 交互（筛选/排序/区间变化一律重置页码，AC-T5/O2/O3）----
+  // ---- 交互（筛选/排序/区间/数据集变化一律重置页码，AC-T5/O2/O3）----
   const handlePreset = useCallback((preset) => {
     setRange(presetRange(preset))
     setPage(1)
@@ -95,6 +100,11 @@ export default function DashboardPage() {
 
   const handleCustom = useCallback((from, to) => {
     setRange(customRange(from, to))
+    setPage(1)
+  }, [])
+
+  const handleDataset = useCallback((ds) => {
+    setDataset(ds)
     setPage(1)
   }, [])
 
@@ -131,6 +141,7 @@ export default function DashboardPage() {
           from: range.from,
           to: range.to,
           scope, // 'view' 套当前筛选+排序；'all' 全区间（AC-X1）
+          klass: effectiveClass,
           currency: filters.currency,
           status: filters.status,
           sort: sort.key,
@@ -143,7 +154,7 @@ export default function DashboardPage() {
         setCsvBusy(false)
       }
     },
-    [range.from, range.to, filters.currency, filters.status, sort.key, sort.dir, i18n.language],
+    [range.from, range.to, effectiveClass, filters.currency, filters.status, sort.key, sort.dir, i18n.language],
   )
 
   // ---- 状态行（AC-S1/S2/S4 + D5 注记）----
@@ -197,13 +208,19 @@ export default function DashboardPage() {
     <TooltipProvider>
       <div className="wrap">
         <AppBar
-          sub={t('dashboard.subAllGross')} /* B1 毛额口径副标题（AC-D2） */
+          sub={t(dataset === 'included' ? 'dashboard.subIncluded' : dataset === 'excluded' ? 'dashboard.subExcluded' : 'dashboard.subAll')}
           status={statusNode}
           onRefresh={handleRefresh}
           onLogout={handleLogout}
         />
         <TimeFilters range={range} today={todayKey()} onPreset={handlePreset} onCustom={handleCustom} />
-        <DatasetBar onCsvView={() => handleCsv('view')} onCsvAll={() => handleCsv('all')} csvBusy={csvBusy} />
+        <DatasetBar
+          dataset={dataset}
+          onDatasetChange={handleDataset}
+          onCsvView={() => handleCsv('view')}
+          onCsvAll={() => handleCsv('all')}
+          csvBusy={csvBusy}
+        />
         <Banners
           error={summary.error || csvError}
           syncFailed={syncFailed}
@@ -219,7 +236,7 @@ export default function DashboardPage() {
         <main className={busyDim ? 'loadingdim' : undefined}>
           {data ? (
             <>
-              <KpiSection kpis={data.kpis} fmt={fmt} range={range} />
+              <KpiSection kpis={data.kpis} fmt={fmt} />
               <div className="stack">
                 <DailyCard
                   variant="est"

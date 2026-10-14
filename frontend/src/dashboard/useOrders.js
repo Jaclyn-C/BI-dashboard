@@ -1,18 +1,19 @@
 // ============================================================
 // useOrders.js — 订单分页表数据 hook（DESIGN §6.3，S8）
-// 区间/筛选/排序/页码任一变化即重拉；响应携带区间动态币种选项（AC-O2）。
+// 区间/数据集/筛选/排序/页码任一变化即重拉；响应携带区间动态币种选项
+// （AC-O2）。klass = 数据集与表格类别筛选的合成值（REQ-20261014-01）。
 // ============================================================
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { getOrders } from '../api/dashboard'
 
-export default function useOrders({ from, to, currency, status, sortKey, sortDir, page }) {
+export default function useOrders({ from, to, klass, currency, status, sortKey, sortDir, page }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [reloadSeq, setReloadSeq] = useState(0)
-  const key = [from, to, currency, status, sortKey, sortDir, page].join('|')
+  const key = [from, to, klass, currency, status, sortKey, sortDir, page].join('|')
   const keyRef = useRef(key)
   keyRef.current = key
 
@@ -20,7 +21,7 @@ export default function useOrders({ from, to, currency, status, sortKey, sortDir
     let cancelled = false
     setLoading(true)
     setError(null)
-    getOrders({ from, to, currency, status, sort: sortKey, dir: sortDir, page })
+    getOrders({ from, to, klass, currency, status, sort: sortKey, dir: sortDir, page })
       .then((payload) => {
         if (!cancelled) setData(payload)
       })

@@ -1,77 +1,146 @@
 // ============================================================
-// KpiSection.jsx — KPI 七卡（HTML:278-314/1312-1351，AC-K1–K8）
-// B1 降级（DESIGN §6.8）：2/3 卡不出金额——值 –、aux 待规则确认、置灰；
-// hero aux 附 kpiGrossNote 毛额标注（AC-K1）。金额全部来自后端字符串。
+// KpiSection.jsx — KPI 卡组（REQ-20261014-01 口径，替代 AC-K1–K8 旧七卡）
+// 11 张金额/计数卡 + 国家数；每张卡右上角灰色「?」，悬停/聚焦显示含义与
+// 计算公式（i18n kpiXxxHelp，文案取自需求 §五的「? 文案」）。
+// 数据集切换：不适用卡片的值由后端置 null → 本组件直接不渲染（前端零
+// 口径判断）。金额全部来自后端字符串（零金额运算，约束 3）。
 // ============================================================
 
 import { useTranslation } from 'react-i18next'
 
-import { countryName, dayLabel, intNum, money } from '../../dashboard/format'
+import { countryName, intNum, money } from '../../dashboard/format'
 
-function Tile({ label, value, aux, pending }) {
+function HelpDot({ help }) {
+  const { t } = useTranslation()
+  return (
+    <span className="infodot">
+      <button type="button" className="dot" aria-label={t('dashboard.kpiHelpAria')}>
+        ?
+      </button>
+      <span className="tip" role="tooltip">
+        {t(help)}
+      </span>
+    </span>
+  )
+}
+
+function Tile({ label, value, aux, help, wide, children }) {
   // 长金额自动缩字号（仅取字符串长度，不做任何金额运算）
   const long = String(value ?? '').length >= 9
   return (
-    <div className={`card tile${pending ? ' pending' : ''}`}>
-      <div className="label">{label}</div>
-      <div className={`value${long ? ' small' : ''}`}>{value}</div>
+    <div className={`card tile${wide ? ' wide' : ''}`}>
+      <div className="label-row">
+        <div className="label">{label}</div>
+        {help ? <HelpDot help={help} /> : null}
+      </div>
+      {value !== undefined ? (
+        <div className={`value${long ? ' small' : ''}`}>{value}</div>
+      ) : null}
+      {children}
       {aux ? <div className="aux">{aux}</div> : null}
     </div>
   )
 }
 
 /**
- * @param {{kpis: object, fmt: object, range: {from: string, to: string}}} props
+ * @param {{kpis: object, fmt: object}} props
  */
-export default function KpiSection({ kpis, fmt, range }) {
+export default function KpiSection({ kpis, fmt }) {
   const { t } = useTranslation()
   if (!kpis) return null
 
-  const heroAux = [
-    t('dashboard.kpiTotalAux', {
-      o: money(fmt, kpis.orders_gross_usd),
-      a: money(fmt, kpis.ad_total),
-      from: dayLabel(fmt, range.from),
-      to: dayLabel(fmt, range.to),
-    }),
-    t('dashboard.kpiGrossNote'),
-  ].join(' · ')
+  const ordersAux = t('dashboard.kpiOrdersAux', {
+    n: intNum(fmt, kpis.orders_completed),
+    m: intNum(fmt, kpis.orders_returned),
+  })
 
   return (
     <section className="kpis">
-      <div className="card tile hero">
-        <div className="label">{t('dashboard.kpiTotal')}</div>
-        <div className={`value${String(money(fmt, kpis.total_revenue)).length >= 10 ? ' small' : ''}`}>
-          {money(fmt, kpis.total_revenue)}
-        </div>
-        <div className="aux">{heroAux}</div>
-      </div>
       <Tile
-        label={t('dashboard.kpiOrderRevName')}
-        value="–"
-        aux={t('dashboard.pendingRule')}
-        pending
+        label={t('dashboard.kpiOrdersTotal')}
+        value={intNum(fmt, kpis.orders_total)}
+        aux={ordersAux}
+        help="dashboard.kpiOrdersTotalHelp"
       />
       <Tile
-        label={t('dashboard.kpiExcludedRevName')}
-        value="–"
-        aux={t('dashboard.pendingRule')}
-        pending
+        label={t('dashboard.kpiTotalAmount')}
+        value={money(fmt, kpis.total_usd)}
+        help="dashboard.kpiTotalAmountHelp"
       />
+      <Tile
+        label={t('dashboard.kpiMyShare')}
+        value={money(fmt, kpis.my_share_usd)}
+        help="dashboard.kpiMyShareHelp"
+      />
+      {kpis.supplier_payable_usd != null ? (
+        <Tile
+          label={t('dashboard.kpiPayable')}
+          value={money(fmt, kpis.supplier_payable_usd)}
+          help="dashboard.kpiPayableHelp"
+        />
+      ) : null}
+      {kpis.supplier_paid_usd != null ? (
+        <Tile
+          label={t('dashboard.kpiPaid')}
+          value={money(fmt, kpis.supplier_paid_usd)}
+          help="dashboard.kpiPaidHelp"
+        />
+      ) : null}
+      {kpis.hidden_saving_usd != null ? (
+        <Tile
+          label={t('dashboard.kpiHidden')}
+          value={money(fmt, kpis.hidden_saving_usd)}
+          help="dashboard.kpiHiddenHelp"
+        />
+      ) : null}
+      {kpis.net_expected_usd != null ? (
+        <Tile
+          label={t('dashboard.kpiNetExpected')}
+          value={money(fmt, kpis.net_expected_usd)}
+          help="dashboard.kpiNetExpectedHelp"
+        />
+      ) : null}
+      {kpis.net_actual_usd != null ? (
+        <Tile
+          label={t('dashboard.kpiNetActual')}
+          value={money(fmt, kpis.net_actual_usd)}
+          help="dashboard.kpiNetActualHelp"
+        />
+      ) : null}
+      <Tile
+        label={t('dashboard.kpiRefunded')}
+        value={money(fmt, kpis.refunded_usd)}
+        help="dashboard.kpiRefundedHelp"
+      />
+      {kpis.included != null && kpis.excluded != null ? (
+        <Tile
+          label={t('dashboard.kpiClassCard')}
+          help="dashboard.kpiClassCardHelp"
+          wide
+        >
+          <div className="duo">
+            <div className="duo-col">
+              <div className="duo-label">{t('dashboard.kpiIncludedCol')}</div>
+              <div className="duo-count">
+                {t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.included.count) })}
+              </div>
+              <div className="duo-amount">{money(fmt, kpis.included.usd)}</div>
+            </div>
+            <div className="duo-col">
+              <div className="duo-label">{t('dashboard.kpiExcludedCol')}</div>
+              <div className="duo-count">
+                {t('dashboard.kpiCountUnit', { n: intNum(fmt, kpis.excluded.count) })}
+              </div>
+              <div className="duo-amount">{money(fmt, kpis.excluded.usd)}</div>
+            </div>
+          </div>
+        </Tile>
+      ) : null}
       <Tile
         label={t('dashboard.kpiAdRev')}
         value={money(fmt, kpis.ad_total)}
         aux={t('dashboard.kpiAdRevAux', { n: intNum(fmt, kpis.ad_days_reported) })}
-      />
-      <Tile label={t('dashboard.kpiGross')} value={money(fmt, kpis.gross_usd)} aux={t('dashboard.kpiGrossAux')} />
-      <Tile
-        label={t('dashboard.kpiOrders')}
-        value={intNum(fmt, kpis.orders_completed)}
-        aux={
-          kpis.orders_returned > 0
-            ? t('dashboard.plusReturned', { n: intNum(fmt, kpis.orders_returned) })
-            : t('dashboard.noReturns')
-        }
+        help="dashboard.kpiAdRevHelp"
       />
       <Tile
         label={t('dashboard.kpiCountries')}

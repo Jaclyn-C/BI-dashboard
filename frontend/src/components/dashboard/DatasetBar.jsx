@@ -1,32 +1,36 @@
 // ============================================================
 // DatasetBar.jsx — 数据集分段控件 + CSV 双按钮（HTML:265-273，AC-D1/X1）
-// B1 降级（DESIGN §6.8）：included/excluded 置灰（disabled 不可聚焦）+
-// 「待规则确认」标注；all 恒为选中；CSV 两档均可用。
-// ⤓(⤓) 字形照搬 HTML:271-272 实体（AC-V3 白名单）。
+// REQ-20261014-01：三档全部启用（全部 / 已计入 / 剔除）——数据集是全局
+// 视图切换，选中后下方全部内容只含该数据集订单（不适用卡片由后端置
+// null、前端不渲染）。⤓ 字形照搬 HTML:271-272 实体（AC-V3 白名单）。
 // ============================================================
 
 import { useTranslation } from 'react-i18next'
 
 /**
- * @param {{onCsvView: () => void, onCsvAll: () => void, csvBusy: boolean}} props
+ * @param {{dataset: string, onDatasetChange: (ds: string) => void,
+ *          onCsvView: () => void, onCsvAll: () => void, csvBusy: boolean}} props
  */
-export default function DatasetBar({ onCsvView, onCsvAll, csvBusy }) {
+export default function DatasetBar({ dataset, onDatasetChange, onCsvView, onCsvAll, csvBusy }) {
   const { t } = useTranslation()
+
+  const dsButton = (value, label) => (
+    <button
+      type="button"
+      data-ds={value}
+      aria-pressed={dataset === value}
+      onClick={() => onDatasetChange(value)}
+    >
+      {label}
+    </button>
+  )
 
   return (
     <div className="dsbar">
       <div className="seg big" role="group" aria-label={t('dashboard.dsGroup')}>
-        <button type="button" data-ds="included" disabled aria-pressed="false">
-          {t('dashboard.dsIncluded')}
-          <span className="pending-note">{t('dashboard.pendingRule')}</span>
-        </button>
-        <button type="button" data-ds="excluded" disabled aria-pressed="false">
-          {t('dashboard.dsExcluded')}
-          <span className="pending-note">{t('dashboard.pendingRule')}</span>
-        </button>
-        <button type="button" data-ds="all" aria-pressed="true">
-          {t('dashboard.dsAll')}
-        </button>
+        {dsButton('included', t('dashboard.dsIncluded'))}
+        {dsButton('excluded', t('dashboard.dsExcluded'))}
+        {dsButton('all', t('dashboard.dsAll'))}
       </div>
       <button type="button" className="btn-tonal push" onClick={onCsvView} disabled={csvBusy}>
         {'⤓'} <span>{t('dashboard.csvView')}</span>

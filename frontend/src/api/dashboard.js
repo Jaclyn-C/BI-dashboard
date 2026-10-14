@@ -27,29 +27,29 @@ async function callMock(name, args, latency = 220) {
   return fixtures[name](args)
 }
 
-/** (1) GET /dashboard/summary?from&to — 一次装载全看板（除订单表），DESIGN §5.2 */
-export function getSummary({ from, to }) {
-  if (MOCK) return callMock('getSummaryMock', { from, to })
-  return request(`/dashboard/summary?${qs({ from, to })}`)
+/** (1) GET /dashboard/summary?from&to&class — 一次装载全看板（除订单表），DESIGN §5.2；class=数据集切换（REQ-20261014-01） */
+export function getSummary({ from, to, klass = 'all' }) {
+  if (MOCK) return callMock('getSummaryMock', { from, to, klass })
+  return request(`/dashboard/summary?${qs({ from, to, class: klass })}`)
 }
 
-/** (2) GET /dashboard/orders?from&to&currency&status&sort&dir&page — 订单分页表，DESIGN §5.3 */
-export function getOrders({ from, to, currency = 'all', status = 'all', sort = 'date', dir = 'desc', page = 1 }) {
-  if (MOCK) return callMock('getOrdersMock', { from, to, currency, status, sort, dir, page }, 150)
-  return request(`/dashboard/orders?${qs({ from, to, currency, status, sort, dir, page })}`)
+/** (2) GET /dashboard/orders?from&to&class&currency&status&sort&dir&page — 订单分页表，DESIGN §5.3 */
+export function getOrders({ from, to, klass = 'all', currency = 'all', status = 'all', sort = 'date', dir = 'desc', page = 1 }) {
+  if (MOCK) return callMock('getOrdersMock', { from, to, klass, currency, status, sort, dir, page }, 150)
+  return request(`/dashboard/orders?${qs({ from, to, class: klass, currency, status, sort, dir, page })}`)
 }
 
 /** (3) GET /dashboard/orders.csv?… — CSV 下载（scope=view|all；lang=en|zh），DESIGN §5.4 */
-export async function downloadOrdersCsv({ from, to, scope, currency = 'all', status = 'all', sort = 'date', dir = 'desc', lang = 'en' }) {
-  const filename = `orders_all_${from}_to_${to}.csv` // B1：dataset 恒 all（m5，两档同名）
+export async function downloadOrdersCsv({ from, to, scope, klass = 'all', currency = 'all', status = 'all', sort = 'date', dir = 'desc', lang = 'en' }) {
+  const filename = `orders_all_${from}_to_${to}.csv` // 两档同名（AC-X2）
   if (MOCK) {
-    // mock 档仅验下载契约形状（文件名/BOM/表头/空列），真值走查归 §7.3 联调点②（m11）
+    // mock 档仅验下载契约形状（文件名/BOM/表头/列值），真值走查归 §7.3 联调点②（m11）
     const fixtures = await import('../mocks/dashboardFixtures')
-    const built = fixtures.buildCsvMock({ from, to, scope, currency, status, sort, dir, lang })
+    const built = fixtures.buildCsvMock({ from, to, scope, klass, currency, status, sort, dir, lang })
     await saveBlobFromText(built.text, filename)
     return
   }
-  return requestDownload(`/dashboard/orders.csv?${qs({ from, to, scope, currency, status, sort, dir, lang })}`, { filename })
+  return requestDownload(`/dashboard/orders.csv?${qs({ from, to, scope, class: klass, currency, status, sort, dir, lang })}`, { filename })
 }
 
 /** (4) POST /dashboard/sync {from,to} → 202 {accepted, status}，DESIGN §5.5 */

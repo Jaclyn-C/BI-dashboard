@@ -1,9 +1,9 @@
 // ============================================================
 // OrdersCard.jsx — 订单明细卡（HTML:379-394/1804-1876，AC-O1–O9）
-// 三筛选（B1：类别置灰；币种动态；状态三档）+ 四列排序（aria-sort +
-// ▲/▼）+ 25/页分页（‹ › + pageOf）。空态区分：区间无订单 empty /
-// 筛选无匹配 noMatch（AC-O6）。类别列置灰 classPending（AC-O1）；
-// 状态 chip ✓/↩ 前缀（AC-O7）；无剔除行斜纹（AC-O8）。
+// 三筛选（类别 REQ-20261014-01 §六 / 币种动态 / 状态三档）+ 四列排序
+// （aria-sort + ▲/▼）+ 25/页分页（‹ › + pageOf）。空态区分：区间无订单
+// empty / 筛选无匹配 noMatch（AC-O6）。类别列显示已计入/被剔除；
+// 状态 chip ✓/↩ 前缀（AC-O7）；剔除行斜纹（AC-O8）。
 // 排序/筛选/翻页状态由 DashboardPage 持有（本组件纯受控）。
 // ============================================================
 
@@ -11,9 +11,15 @@ import { useTranslation } from 'react-i18next'
 
 import { countryName, intNum, money, nativeMoney } from '../../dashboard/format'
 
+const classLabel = (t, value) => {
+  if (value === 'included') return t('dashboard.clIncluded')
+  if (value === 'excluded') return t('dashboard.clExcluded')
+  return '—'
+}
+
 /**
  * @param {{data: object|null, fmt: object,
- *          filters: {currency: string, status: string},
+ *          filters: {klass: string, currency: string, status: string},
  *          sort: {key: string, dir: string}, page: number,
  *          onFilterChange: (patch: object) => void,
  *          onSort: (key: string) => void, onPageChange: (page: number) => void}} props
@@ -75,14 +81,14 @@ export default function OrdersCard({ data, fmt, filters, sort, page, onFilterCha
           </thead>
           <tbody>
             {rows.map((o) => (
-              <tr key={o.order_id}>
+              <tr key={o.order_id} className={o.order_class === 'excluded' ? 'row-excluded' : undefined}>
                 <td className="mono">{o.order_id}</td>
                 <td>{o.create_time}</td>
                 <td>{countryName(o.country_key, fmt, unknownLabel)}</td>
                 <td>{o.currency}</td>
                 <td className="num">{nativeMoney(fmt, o.amount)}</td>
                 <td className="num">{o.usd == null ? '—' : money(fmt, o.usd)}</td>
-                <td className="muted">{t('dashboard.classPending')}</td>
+                <td className="muted">{classLabel(t, o.order_class)}</td>
                 <td>
                   {o.status === 'returned' ? (
                     <span className="chip-status returned">{`↩ ${t('dashboard.stReturned')}`}</span>
@@ -110,7 +116,12 @@ export default function OrdersCard({ data, fmt, filters, sort, page, onFilterCha
           <label className="visually-hidden" htmlFor="typeFilter">
             {t('dashboard.hClass')}
           </label>
-          <select className="field" id="typeFilter" disabled value="all" onChange={() => {}}>
+          <select
+            className="field"
+            id="typeFilter"
+            value={filters.klass}
+            onChange={(e) => onFilterChange({ klass: e.target.value })}
+          >
             <option value="all">{t('dashboard.fAllClasses')}</option>
             <option value="included">{t('dashboard.clIncluded')}</option>
             <option value="excluded">{t('dashboard.clExcluded')}</option>

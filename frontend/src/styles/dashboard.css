@@ -675,6 +675,10 @@ th .arrow {
     padding-top: 16px;
   }
 }
+/* 条形图相对表格垂直居中（表格限高内滚，图不拉伸） */
+.countrytwo {
+  align-items: center;
+}
 /* 长列表限高内滚 + 表头吸附（全部行保留，滚动可达） */
 .countrytwo .cscroll {
   max-height: 480px;
@@ -687,7 +691,7 @@ th .arrow {
   background: var(--surface);
 }
 .countrytable td {
-  vertical-align: top;
+  vertical-align: middle;
 }
 /* 极淡斑马纹 + 行悬停高亮（悬停规则置于斑马纹之后以覆盖偶数行） */
 .countrytable tbody tr:nth-child(even) td {

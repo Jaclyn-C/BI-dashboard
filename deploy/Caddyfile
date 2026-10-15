@@ -1,0 +1,22 @@
+# Caddy 生产配置（compose.prod.yaml 以只读卷挂载进容器）。
+#
+# SITE_ADDRESS 为空 → 纯 HTTP :80（临时演示默认，裸 IP 访问）；
+# 设为域名（如境外服务器可用 1-2-3-4.sslip.io）→ 自动签发 HTTPS 证书。
+{$SITE_ADDRESS::80} {
+	encode zstd gzip
+
+	# 后端 API 同源反代（前端生产无需 CORS）
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM:http://api:8000}
+	}
+	handle /healthz {
+		reverse_proxy {$API_UPSTREAM:http://api:8000}
+	}
+
+	# React SPA 静态托管 + history 路由回退
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

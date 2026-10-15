@@ -1,0 +1,68 @@
+# 生产/临时演示部署（.claude/memory/deployment.md 形态落地）：
+#   api（FastAPI，先迁移后启动）+ postgres（不映射端口，数据库不出服务器）
+#   + caddy（静态前端 + /api 同源反代）；
+#   可选 profile tunnel：cloudflared 快速隧道（免域名 HTTPS，地址随机）。
+#
+# 用法（完整步骤见 docs/deploy-temp-demo.md）：
+#   cp .env.prod.example .env.prod && vim .env.prod    # 改密钥
+#   docker compose --env-file .env.prod -f compose.prod.yaml up -d --build
+services:
+  api:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      # 覆盖 env_file 同名项：容器内经服务网络互访，主机名固定 postgres
+      DATABASE_URL: ${DATABASE_URL}
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pd_prod_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # 刻意不映射端口：数据库不暴露公网（安全底线）
+
+  caddy:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      # 空值兜底 :80（Caddy 占位符把空串当有效值会导致站点地址为空、启动失败）
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      API_UPSTREAM: http://api:8000
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - pd_prod_caddy_data:/data
+      - pd_prod_caddy_config:/config
+    depends_on:
+      - api
+
+  cloudflared:
+    profiles: ["tunnel"]
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --url http://caddy:80
+    depends_on:
+      - caddy
+
+volumes:
+  pd_prod_pgdata:
+  pd_prod_caddy_data:
+  pd_prod_caddy_config:

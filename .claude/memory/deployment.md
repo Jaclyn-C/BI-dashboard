@@ -24,3 +24,10 @@
 
 - **dev**：本地 docker compose（PostgreSQL 与生产同款，不用 SQLite 替代，避免方言漂移）
 - **prod**：公网 VPS + compose；升级流程待首次部署时补充
+
+## 物料落地（2026-10-15，临时演示）
+
+- `compose.prod.yaml`：api + postgres（不映射端口）+ caddy（静态前端 + /api 反代 + SPA 回退），可选 `--profile tunnel`（cloudflared 快速隧道，免域名 HTTPS）
+- `backend/Dockerfile`（py3.12-slim，启动先 alembic upgrade）、`frontend/Dockerfile`（node20 + pnpm@10 构建 → caddy:2-alpine 托管 dist）、`deploy/Caddyfile`（SITE_ADDRESS 空=纯 80；填 sslip.io 域名=自动 HTTPS）
+- `.env.prod.example` → `.env.prod`（不入库）；操作手册 `docs/deploy-temp-demo.md`（按量付费 VPS、pg_dump 本地数据导入、演示完销毁）
+- 演示默认 ENVIRONMENT=development（验证码走日志）；上游凭据留空 → sync 调度自动不跑，分类口径零触碰

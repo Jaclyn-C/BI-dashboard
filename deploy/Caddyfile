@@ -1,0 +1,15 @@
+# 生产反向代理：{$DOMAIN} 来自 .env 的 DOMAIN，Caddy 自动申请/续期 HTTPS 证书。
+# 后端路由：/api/*、/healthz、/docs*（供应商接口文档）、/redoc*、/openapi.json → api:8000；
+# 其余走 SPA 静态文件（history 路由回退 index.html）。
+{$DOMAIN} {
+	encode zstd gzip
+	@backend path /api/* /healthz /docs* /redoc* /openapi.json
+	handle @backend {
+		reverse_proxy api:8000
+	}
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

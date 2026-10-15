@@ -1,0 +1,61 @@
+# 生产编排：postgres（不暴露公网）+ api + web（Caddy：静态托管 + 反代 + 自动 HTTPS）
+# 使用与升级流程见 docs/deployment/部署指南.md；配置在根目录 .env（模板 .env.prod.example）。
+name: pd-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pd
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env 配置 POSTGRES_PASSWORD}
+      POSTGRES_DB: pd
+    volumes:
+      - pd_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pd -d pd"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # 安全底线（deployment.md）：不映射端口，数据库只在 compose 内网可达
+
+  api:
+    build:
+      context: ./backend
+      args:
+        # 国内本机构建可 export PIP_INDEX_URL=清华源 加速；服务器（香港）用默认官方源
+        PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
+    container_name: pd-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # 库地址由编排给定（指向 compose 内网 postgres），覆盖 .env 里的本地开发值
+      DATABASE_URL: postgresql+psycopg://pd:${POSTGRES_PASSWORD}@postgres:5432/pd
+      # environment 优先级高于 env_file，保证 --env-file 覆盖测试时可关同步
+      SYNC_ENABLED: ${SYNC_ENABLED:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    container_name: pd-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    environment:
+      DOMAIN: ${DOMAIN:?请在 .env 配置 DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - pd_caddy_data:/data # TLS 证书，换域名外不重建
+      - pd_caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  pd_pgdata:
+  pd_caddy_data:
+  pd_caddy_config:

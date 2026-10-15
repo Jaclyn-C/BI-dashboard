@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.prod.example
 
 # Python
 __pycache__/
@@ -29,6 +30,9 @@ dist/
 
 # 本地真实业务数据（分析数据集等，永不入库）
 data/
+
+# 服务器数据库备份（teardown.sh 下载产物，永不入库）
+backups/
 
 # Python 构建产物
 *.egg-info/

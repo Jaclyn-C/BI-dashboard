@@ -29,7 +29,7 @@
 
 ## 下游接口（我们提供给供应商的）
 
-- 原则已定（REQ-20261014-01）：只返回 `tag = included` 的订单、**只暴露必要字段**（不返回 tag/send_flag 等内部字段）；已计入订单状态随上游同步更新。**本期不实现**，待单独需求（供应商实体/API key/多供应商分配 = B4 待确认）
+- 原则已定（REQ-20261014-01 + REQ-20261015-02）：只返回 `tag = included` 的订单、**只暴露必要字段**（不返回 tag/send_flag 等内部字段）；**客户仅可见订单明细——广告收入、KPI、聚合一律不暴露**（2026-10-15 用户定稿）；已计入订单状态随上游同步更新。字段裁剪必须在后端完成。内部预览页已上线：`/customer` 页 + `GET /dashboard/customer-orders`（included-only、响应无任何分类键名，测试锁死）。**供应商真接口本期不实现**，待单独需求（供应商实体/API key/多供应商分配 = B4 待确认），字段集以 customer-orders 为契约起点
 - `/api/v1/supplier/**`、API key 鉴权、按供应商隔离、FastAPI OpenAPI（`/docs`）作为对外文档
 
 ## 2026-10-14 实测更新（order/list 字段与 adSummary 状态）

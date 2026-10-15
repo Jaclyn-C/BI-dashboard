@@ -9,7 +9,6 @@
 //
 // 数据特征（覆盖前端各分支）：
 //   - 10 个币种 → 每日图前 6+__other 折叠、对比环前 7+__other 折叠
-//   - BHD/KZT 无固定汇率（conv.no_rate_currencies）
 //   - BHD/KZT 部分订单缺 usd（conv.no_usd_* / AC-C8 横幅）
 //   - 18+ 国家 → 国家条前 9+__other 折叠
 //   - 固定一天 truncated（AC-S7 横幅）、区间含今天 → incomplete_tail
@@ -313,18 +312,10 @@ export function getSummaryMock({ from, to, klass = 'all' }) {
       noUsdOrderCount += 1
       noUsdCurrencies.add(o.currency)
     }
-    // 对比卡行（全部已完成订单，无论有无美元/汇率）
+    // 币种卡行（全部已完成订单，无论有无美元；REQ-20261015-01 仅上游美元口径）
     let r = convRows.get(o.currency)
     if (!r) {
-      r = {
-        currency: o.currency,
-        has_rate: rate !== undefined,
-        rate: rate === undefined ? null : String(rate),
-        orders: 0,
-        native: 0,
-        legacy: 0,
-        server: 0,
-      }
+      r = { currency: o.currency, orders: 0, native: 0, legacy: 0, server: 0 }
       convRows.set(o.currency, r)
     }
     r.orders += 1
@@ -379,39 +370,28 @@ export function getSummaryMock({ from, to, klass = 'all' }) {
     }
   }
 
-  // 对比卡：行排序 max(server,legacy) 降序；切片前 7 + __other（RQ-3）
+  // 币种卡：行排序 server 降序；切片前 7 + __other（RQ-3）
   const convList = [...convRows.values()]
-    .map((r) => {
-      const base = r.server || r.legacy
-      const delta = r.server - r.legacy
-      const flagged = base > 0 && Math.abs(delta) >= 1 && Math.abs(delta / base) >= 0.01
-      return {
-        ...r,
-        native: round2(r.native),
-        legacy_usd: round2(r.legacy),
-        server_usd: round2(r.server),
-        delta: round2(delta),
-        delta_pct: base ? ((delta / base) * 100).toFixed(1) : '0',
-        flagged,
-      }
-    })
-    .sort((a, b) => Math.max(Number(b.server_usd), Number(b.legacy_usd)) - Math.max(Number(a.server_usd), Number(a.legacy_usd)))
+    .map((r) => ({
+      currency: r.currency,
+      orders: r.orders,
+      native: round2(r.native),
+      server_usd: round2(r.server),
+    }))
+    .sort((a, b) => Number(b.server_usd) - Number(a.server_usd))
 
-  const legacyTotal = convList.reduce((s, r) => s + Number(r.legacy_usd), 0)
+  // legacyTotal 仅供每日「估算」卡 aria 合计（AC-V4），不进币种卡输出
+  const legacyTotal = [...convRows.values()].reduce((s, r) => s + r.legacy, 0)
   const serverTotal = convList.reduce((s, r) => s + Number(r.server_usd), 0)
-  const deltaTotal = serverTotal - legacyTotal
-  const convBase = serverTotal || legacyTotal
 
   const convSlices = convList.slice(0, 7).map((r) => ({
     key: r.currency,
-    legacy_usd: r.legacy_usd,
     server_usd: r.server_usd,
   }))
   const convTail = convList.slice(7)
   if (convTail.length) {
     convSlices.push({
       key: '__other',
-      legacy_usd: round2(convTail.reduce((s, r) => s + Number(r.legacy_usd), 0)),
       server_usd: round2(convTail.reduce((s, r) => s + Number(r.server_usd), 0)),
     })
   }
@@ -532,15 +512,11 @@ export function getSummaryMock({ from, to, klass = 'all' }) {
       ad,
     },
     conv: {
-      empty: convList.length === 0 || (legacyTotal <= 0 && serverTotal <= 0),
+      empty: convList.length === 0 || serverTotal <= 0,
       rows: convList,
       slices: convSlices,
       legacy_total: round2(legacyTotal),
       server_total: round2(serverTotal),
-      delta_total: round2(deltaTotal),
-      delta_pct: convBase ? ((deltaTotal / convBase) * 100).toFixed(1) : '0',
-      agree: convBase > 0 && Math.abs(deltaTotal / convBase) < 0.005,
-      no_rate_currencies: convList.filter((r) => !r.has_rate).map((r) => r.currency).sort(),
       no_usd_order_count: noUsdOrderCount,
       no_usd_currencies: [...noUsdCurrencies].sort(),
     },

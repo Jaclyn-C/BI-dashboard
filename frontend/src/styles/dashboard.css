@@ -394,21 +394,12 @@
     justify-items: center;
   }
 }
-.convtwo {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  align-items: start;
-  margin-bottom: 4px;
-}
-.convtwo > * {
-  min-width: 0;
-}
 .convpie {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
+  margin-bottom: 4px;
 }
 .convpie .chartbox {
   max-width: 240px;
@@ -428,9 +419,6 @@
   }
 }
 @media (max-width: 640px) {
-  .convtwo {
-    grid-template-columns: 1fr;
-  }
   .tile .value {
     font-size: 18px;
   }
@@ -445,15 +433,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-td.delta-pos {
-  color: var(--good-text);
-}
-td.delta-neg {
-  color: var(--crit);
-}
-tr.delta-flag td {
-  background: rgba(250, 178, 25, 0.1);
 }
 .chartbox {
   position: relative;

@@ -71,7 +71,9 @@ export default function Banners({
     )
   }
 
-  if (adError !== null) {
+  // != null：prop 未传（undefined）与 null 同视为"无广告错误"——客户视图不传
+  // adError，旧判断 !== null 会把 undefined 当有值恒显横幅（REQ-20261015-02 实测）
+  if (adError != null) {
     boxes.push(
       <WarnBanner key="ad" title={t('dashboard.adFailTitle')} body={adError} />,
     )

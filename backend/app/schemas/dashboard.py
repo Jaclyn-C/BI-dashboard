@@ -118,20 +118,13 @@ class DailyOut(BaseModel):
 
 class ConvRow(BaseModel):
     currency: str
-    has_rate: bool
-    rate: str | None
     orders: int
     native: str
-    legacy_usd: str
     server_usd: str
-    delta: str
-    delta_pct: str | None
-    flagged: bool
 
 
 class ConvSlice(BaseModel):
     key: str
-    legacy_usd: str
     server_usd: str
 
 
@@ -139,12 +132,9 @@ class ConvOut(BaseModel):
     empty: bool
     rows: list[ConvRow]
     slices: list[ConvSlice]
+    #: 旧固定汇率口径合计：卡片不再展示，仅供每日「估算」卡 aria total 引用（AC-V4）
     legacy_total: str
     server_total: str
-    delta_total: str
-    delta_pct: str | None
-    agree: bool
-    no_rate_currencies: list[str]
     no_usd_order_count: int
     no_usd_currencies: list[str]
 

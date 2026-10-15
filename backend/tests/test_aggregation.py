@@ -153,37 +153,23 @@ def test_golden_fixture_conv_card(db_session):
     conv = build_summary(db_session, date(2026, 10, 1), date(2026, 10, 2)).conv
 
     assert conv.empty is False
-    # 排序：max(server, legacy) 降序 → USD 1500 / EUR 1170 / MXN 723 / KRW 144 / BHD 0
+    # 排序：server 降序 → USD 1500 / EUR 1100 / MXN 723 / KRW 144 / BHD 0
     assert [row.currency for row in conv.rows] == ["USD", "EUR", "MXN", "KRW", "BHD"]
     usd, eur, mxn, krw, bhd = conv.rows
-    assert (usd.legacy_usd, usd.server_usd, usd.delta, usd.delta_pct, usd.flagged) == (
-        "15.00", "15.00", "0.00", "0.0", False
-    )
-    # EUR：1100 vs 1170 → -0.70（|Δ|=70 分 < $1 阈值 → 不标红，AC-C3）
-    assert (eur.legacy_usd, eur.server_usd, eur.delta, eur.delta_pct, eur.flagged) == (
-        "11.70", "11.00", "-0.70", "-6.4", False
-    )
-    # MXN：723 vs 313.2 → Δ=409.8 分（≥$1 且 ≥1%）→ 标红（AC-C3）
-    assert (mxn.legacy_usd, mxn.server_usd, mxn.delta, mxn.delta_pct, mxn.flagged) == (
-        "3.13", "7.23", "4.10", "+56.7", True
-    )
-    assert mxn.native == "58.00" and mxn.orders == 2 and mxn.rate == "0.054"
-    assert (krw.legacy_usd, krw.server_usd) == ("1.44", "1.44")
-    # BHD：无汇率 + 缺 usd → 全零行、无百分比（base=0）
-    assert (bhd.has_rate, bhd.rate, bhd.legacy_usd, bhd.server_usd, bhd.delta_pct) == (
-        False, None, "0.00", "0.00", None
-    )
-    # 合计：34.67 vs 31.27 → Δ 3.40（9.8%）> 0.5% → 不一致（AC-C5）
-    assert (conv.legacy_total, conv.server_total, conv.delta_total, conv.delta_pct) == (
-        "31.27", "34.67", "3.40", "+9.8"
-    )
-    assert conv.agree is False
-    assert conv.no_rate_currencies == ["BHD"]
+    assert (usd.native, usd.server_usd, usd.orders) == ("15.00", "15.00", 1)
+    assert (eur.native, eur.server_usd, eur.orders) == ("10.00", "11.00", 1)
+    assert (mxn.native, mxn.server_usd, mxn.orders) == ("58.00", "7.23", 2)
+    assert (krw.native, krw.server_usd, krw.orders) == ("2000.00", "1.44", 1)
+    # BHD：缺 usd → 金额 0、只计数（REQ-20261015-01）
+    assert (bhd.native, bhd.server_usd, bhd.orders) == ("7.00", "0.00", 1)
+    # 合计：legacy_total 保留仅供「估算」卡 aria（AC-V4），不再有 Δ/一致判定字段
+    assert (conv.legacy_total, conv.server_total) == ("31.27", "34.67")
+    assert not hasattr(conv, "delta_total") and not hasattr(conv, "agree")
     assert conv.no_usd_order_count == 1  # O5（已完成口径）
     assert conv.no_usd_currencies == ["BHD"]
     # 环图切片：5 币 ≤ 7 → 全量、无 __other
     assert [s.key for s in conv.slices] == ["USD", "EUR", "MXN", "KRW", "BHD"]
-    assert (conv.slices[2].legacy_usd, conv.slices[2].server_usd) == ("3.13", "7.23")
+    assert conv.slices[2].server_usd == "7.23"
 
 
 def test_dataset_included_scopes_rows_and_cards(db_session):

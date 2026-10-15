@@ -62,13 +62,6 @@ MAX_CONV_SLICES = 7
 #: 国家条形上限：前 9 + __other = 10（HTML MAXROWS，AC-N1）
 MAX_COUNTRY_ROWS = 10
 
-#: Δ 行高亮阈值：|Δ| ≥ $1（100 minor）且 ≥ 行基数 1%（AC-C3）
-_DELTA_FLAG_MINOR = Decimal(100)
-_DELTA_FLAG_RATIO = Decimal("0.01")
-
-#: 新旧合计一致阈值 0.5%（AC-C5）
-_AGREE_RATIO = Decimal("0.005")
-
 _REGION_RE = re.compile(r"[_-]([A-Za-z]{2})$")
 
 
@@ -90,12 +83,6 @@ def country_key(language: str | None) -> str:
 def iter_range_days(date_from: date, date_to: date) -> list[date]:
     """区间内逐日列表（含两端）。"""
     return [date_from + timedelta(days=i) for i in range((date_to - date_from).days + 1)]
-
-
-def _signed_pct(value: Decimal) -> str:
-    """百分比 1 位小数带符号（正加 +，负自带 −，0 不加）。"""
-    pct = quantize_1(value)
-    return f"+{pct}" if pct > 0 else str(pct)
 
 
 def _fold_series(
@@ -187,7 +174,7 @@ def build_summary(
         orders_completed += 1
         currency = str(currency_type or "?").upper()
 
-        # ---- 对比卡（全部已完成订单，含缺 usd / 缺汇率，AC-C7）----
+        # ---- 币种卡（全部已完成订单，含缺 usd，AC-C7；REQ-20261015-01 仅上游美元口径）----
         conv = conv_rows.get(currency)
         if conv is None:
             conv = {
@@ -195,7 +182,6 @@ def build_summary(
                 "native": zero,
                 "legacy": zero,
                 "server": zero,
-                "has_rate": legacy_usd_rate(currency) is not None,
             }
             conv_rows[currency] = conv
         conv["orders"] += 1
@@ -313,52 +299,29 @@ def build_summary(
             )
         return out
 
-    # ---- 对比卡（§4.1 规则；排序 max(server, legacy) 降序）----
+    # ---- 币种卡（REQ-20261015-01：仅上游美元口径；排序 server 降序）----
     conv_list = sorted(
-        conv_rows.items(), key=lambda item: max(item[1]["server"], item[1]["legacy"]), reverse=True
+        conv_rows.items(), key=lambda item: item[1]["server"], reverse=True
     )
     legacy_total_minor = zero
     server_total_minor = zero
     conv_out_rows: list[ConvRow] = []
     for currency, conv in conv_list:
+        # legacy 合计仅供每日「估算」卡 aria total 引用（AC-V4），不再进对比卡输出
         legacy_total_minor += conv["legacy"]
         server_total_minor += conv["server"]
-        delta = conv["server"] - conv["legacy"]
-        base = conv["server"] if conv["server"] != 0 else conv["legacy"]
-        rate = legacy_usd_rate(currency)
-        flagged = (
-            abs(delta) >= _DELTA_FLAG_MINOR
-            and base > 0
-            and abs(delta) >= base * _DELTA_FLAG_RATIO
-        )
         conv_out_rows.append(
             ConvRow(
                 currency=currency,
-                has_rate=conv["has_rate"],
-                rate=str(rate) if rate is not None else None,
                 orders=conv["orders"],
                 native=money_str(conv["native"]),
-                legacy_usd=money_str(conv["legacy"]),
                 server_usd=money_str(conv["server"]),
-                delta=money_str(delta),
-                delta_pct=_signed_pct(delta / base * 100) if base > 0 else None,
-                flagged=flagged,
             )
         )
-    delta_total_minor = server_total_minor - legacy_total_minor
-    total_base = (
-        server_total_minor if server_total_minor != 0 else legacy_total_minor
-    )
-    agree = total_base > 0 and abs(delta_total_minor) < total_base * _AGREE_RATIO
-    no_rate_currencies = sorted(cur for cur, conv in conv_rows.items() if not conv["has_rate"])
 
-    # 环图切片：前 7 + __other（双口径值都给，≤8 切片，RQ-3）
+    # 环图切片：前 7 + __other（上游美元口径，≤8 切片，RQ-3）
     conv_slices: list[ConvSlice] = [
-        ConvSlice(
-            key=cur,
-            legacy_usd=money_str(conv["legacy"]),
-            server_usd=money_str(conv["server"]),
-        )
+        ConvSlice(key=cur, server_usd=money_str(conv["server"]))
         for cur, conv in conv_list[:MAX_CONV_SLICES]
     ]
     conv_tail = conv_list[MAX_CONV_SLICES:]
@@ -366,11 +329,10 @@ def build_summary(
         conv_slices.append(
             ConvSlice(
                 key=OTHER_KEY,
-                legacy_usd=money_str(sum((conv["legacy"] for _, conv in conv_tail), zero)),
                 server_usd=money_str(sum((conv["server"] for _, conv in conv_tail), zero)),
             )
         )
-    conv_empty = not conv_out_rows or (legacy_total_minor <= 0 and server_total_minor <= 0)
+    conv_empty = not conv_out_rows or server_total_minor <= 0
 
     # ---- 国家（按毛额 USD 降序；bars 前 9 + __other 求和合并，HTML:1725-1729）----
     country_sorted = sorted(countries.items(), key=lambda item: item[1]["usd"], reverse=True)
@@ -527,12 +489,6 @@ def build_summary(
             slices=conv_slices,
             legacy_total=money_str(legacy_total_minor),
             server_total=money_str(server_total_minor),
-            delta_total=money_str(delta_total_minor),
-            delta_pct=_signed_pct(delta_total_minor / total_base * 100)
-            if total_base > 0
-            else None,
-            agree=agree,
-            no_rate_currencies=no_rate_currencies,
             no_usd_order_count=no_usd_order_count,
             no_usd_currencies=sorted(no_usd_currencies),
         ),

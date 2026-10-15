@@ -24,7 +24,8 @@
 - 唯一例外：**Phase 0 数据记录器**可临时调用它留存分类标签真值（老后端随时可能下线，每多跑一天多一天真值；调研期是否允许查询 = 待确认 4）
 - 老后端账号 REDACTED-USER/REDACTED-PASSWORD（值已抹除） 已随 HTML 泄露，按已失效处理；上游密钥轮换待办（待确认 6）
 - ✅ **2026-10-12 18:00 复测：上游凭据恢复可用**（换票成功，research/01 §8.4 的 11:05 失效事件已过去——当时疑与我方清理泄露凭据撞期）。真实数据联调可用。仍建议择期正式轮换（凭据毕竟泄露过），但**不阻塞任何开发与验证**。
-- 换票响应的 scope 清单比飞书文档多出 3 个：`order:adDetail`、`user:newSummary`、`monitorLink:create`——证实存在未文档化接口，后续需要时再探。
+- 换票响应的 scope 清单比飞书文档多出 3 个：`order:adDetail`、`user:newSummary`、`monitorLink:create`——证实存在未文档化接口。
+  - **`order:adDetail` 已探明（2026-10-15）**：`POST /open/order/adDetail`，入参与 adSummary 同形态；返回 `{date, linkId, ad_revenue_dollars}` = **按推广链接细分的每日广告收益**，各行加总 = adSummary 同日值。同样有 ≤1 天区间限制、同样只剩近约 3 天历史。当前仅 1 条链接故无增量；未来多链接投放时再考虑入同步（`user:newSummary` / `monitorLink:create` 仍待探）。
 
 ## 下游接口（我们提供给供应商的）
 

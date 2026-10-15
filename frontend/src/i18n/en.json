@@ -75,7 +75,7 @@
     "loading": "Loading…",
     "updated": "Updated {{t}} · {{n}} orders",
     "connFailed": "Connection failed",
-    "refresh": "Refresh data",
+    "refresh": "Refresh",
     "signOut": "Sign out",
     "tfLabel": "Time frame",
     "today": "Today",

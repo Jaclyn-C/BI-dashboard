@@ -2,7 +2,8 @@
 // CustomerViewPage.jsx — 客户视图页（REQ-20261015-02）
 // 展示下游客户调用供应商接口能看到的全部数据：仅已计入订单、纯订单信息
 // （后端 /dashboard/customer-orders 已做 included-only + 字段裁剪，页面
-// 不引入任何分类信息）。复用 TimeFilters + OrdersCard(hideClass) + Banners。
+// 不引入任何分类信息）。复用 TimeFilters + OrdersCard(hideClass) + Banners；
+// 卡片头部提供"当前视图（CSV）"下载（当前筛选+排序透传，导出全部行、跨页）。
 // ============================================================
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -11,6 +12,7 @@ import { useNavigate } from 'react-router-dom'
 
 import useAuth from '../auth/useAuth'
 import usePageTitle from '../utils/usePageTitle'
+import { downloadCustomerOrdersCsv } from '../api/dashboard'
 import { customRange, presetRange, todayKey } from '../dashboard/range'
 import { buildFormatters, intNum } from '../dashboard/format'
 import useCustomerOrders from '../dashboard/useCustomerOrders'
@@ -29,6 +31,8 @@ export default function CustomerViewPage() {
   const [filters, setFilters] = useState({ currency: 'all', status: 'all' })
   const [sort, setSort] = useState({ key: 'date', dir: 'desc' })
   const [page, setPage] = useState(1)
+  const [csvBusy, setCsvBusy] = useState(false)
+  const [csvError, setCsvError] = useState(null)
 
   const locale = i18n.language === 'zh' ? 'zh-CN' : 'en-US'
   const fmt = useMemo(() => buildFormatters(locale), [locale])
@@ -73,6 +77,27 @@ export default function CustomerViewPage() {
     setPage(1)
   }, [])
 
+  // 当前视图 CSV：筛选+排序原样透传，导出该条件下的全部行（跨页，同主看板 scope=view 语义）
+  const handleCsv = useCallback(async () => {
+    setCsvBusy(true)
+    setCsvError(null)
+    try {
+      await downloadCustomerOrdersCsv({
+        from: range.from,
+        to: range.to,
+        currency: filters.currency,
+        status: filters.status,
+        sort: sort.key,
+        dir: sort.dir,
+        lang: i18n.language === 'zh' ? 'zh' : 'en',
+      })
+    } catch (e) {
+      setCsvError(e) // 下载失败并入错误横幅（重试=重载，同看板）
+    } finally {
+      setCsvBusy(false)
+    }
+  }, [range.from, range.to, filters.currency, filters.status, sort.key, sort.dir, i18n.language])
+
   const handleLogout = useCallback(() => {
     logout()
     navigate('/login', { replace: true })
@@ -90,7 +115,13 @@ export default function CustomerViewPage() {
         onLogout={handleLogout}
       />
       <TimeFilters range={range} today={todayKey()} onPreset={handlePreset} onCustom={handleCustom} />
-      <Banners error={orders.error} onRetryError={orders.reload} />
+      <Banners
+        error={orders.error || csvError}
+        onRetryError={() => {
+          setCsvError(null) // 同主看板：重试先清下载错误，避免横幅残留
+          orders.reload()
+        }}
+      />
       <main className={orders.loading ? 'loadingdim' : undefined}>
         <div className="custnote">{t('customer.note')}</div>
         <div className="stack">
@@ -103,6 +134,16 @@ export default function CustomerViewPage() {
             hideClass
             title={t('customer.title')}
             sub={t('customer.ordersSub', { n: intNum(fmt, total), m: intNum(fmt, totalInRange) })}
+            actions={
+              <button
+                type="button"
+                className="btn-tonal"
+                onClick={handleCsv}
+                disabled={csvBusy || !total}
+              >
+                {'⤓'} <span>{t('dashboard.csvView')}</span>
+              </button>
+            }
             sort={sort}
             page={page}
             onFilterChange={handleFilterChange}

@@ -57,6 +57,12 @@ export async function downloadOrdersCsv({ from, to, scope, klass = 'all', curren
   return requestDownload(`/dashboard/orders.csv?${qs({ from, to, scope, class: klass, currency, status, sort, dir, lang })}`, { filename })
 }
 
+/** (3b) GET /dashboard/customer-orders.csv?… — 客户视图 CSV（当前筛选全量行、跨页；REQ-20261015-02：7 列纯订单信息、included-only） */
+export async function downloadCustomerOrdersCsv({ from, to, currency = 'all', status = 'all', sort = 'date', dir = 'desc', lang = 'en' }) {
+  const filename = `customer_orders_${from}_to_${to}.csv`
+  return requestDownload(`/dashboard/customer-orders.csv?${qs({ from, to, currency, status, sort, dir, lang })}`, { filename })
+}
+
 /** (4) POST /dashboard/sync {from,to} → 202 {accepted, status}，DESIGN §5.5 */
 export function triggerSync({ from, to }) {
   if (MOCK) return callMock('triggerSyncMock', { from, to }, 120)

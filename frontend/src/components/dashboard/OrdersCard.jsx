@@ -25,11 +25,13 @@ const classLabel = (t, value) => {
  *          sort: {key: string, dir: string}, page: number,
  *          onFilterChange: (patch: object) => void,
  *          onSort: (key: string) => void, onPageChange: (page: number) => void,
- *          hideClass?: boolean, title?: string, sub?: string}} props
+ *          hideClass?: boolean, title?: string, sub?: string,
+ *          actions?: React.ReactNode}} props
  * hideClass=true → 客户视图变体（REQ-20261015-02）：无类别列、无类别筛选；
- * title/sub 可覆盖默认标题与副标题。
+ * title/sub 可覆盖默认标题与副标题；actions 渲染在卡片头部右侧筛选器前
+ * （客户视图"当前视图（CSV）"下载按钮用）。
  */
-export default function OrdersCard({ data, fmt, filters, classValue, classLocked, sort, page, onFilterChange, onSort, onPageChange, hideClass = false, title, sub }) {
+export default function OrdersCard({ data, fmt, filters, classValue, classLocked, sort, page, onFilterChange, onSort, onPageChange, hideClass = false, title, sub, actions = null }) {
   const { t } = useTranslation()
   const [pageInput, setPageInput] = useState('')
   const unknownLabel = t('dashboard.unknownCountry')
@@ -131,6 +133,7 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
           {sub || t('dashboard.ordersSub', { n: intNum(fmt, total), m: intNum(fmt, totalInRange) })}
         </span>
         <div className="right">
+          {actions}
           {hideClass ? null : (
             <>
               <label className="visually-hidden" htmlFor="typeFilter">

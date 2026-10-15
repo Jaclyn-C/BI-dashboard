@@ -30,6 +30,7 @@ import AdCard from '../components/dashboard/AdCard'
 import ConvCard from '../components/dashboard/ConvCard'
 import CountryCard from '../components/dashboard/CountryCard'
 import OrdersCard from '../components/dashboard/OrdersCard'
+import GuideModal from '../components/dashboard/GuideModal'
 import { niceCeil } from '../components/dashboard/charts/chartMath'
 import { TooltipProvider } from '../components/dashboard/charts/Tooltip'
 
@@ -49,6 +50,7 @@ export default function DashboardPage() {
   const [csvBusy, setCsvBusy] = useState(false)
   const [csvError, setCsvError] = useState(null)
   const [syncFailed, setSyncFailed] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
 
   const locale = i18n.language === 'zh' ? 'zh-CN' : 'en-US'
   const fmt = useMemo(() => buildFormatters(locale), [locale])
@@ -212,6 +214,7 @@ export default function DashboardPage() {
         <AppBar
           sub={t(dataset === 'included' ? 'dashboard.subIncluded' : dataset === 'excluded' ? 'dashboard.subExcluded' : 'dashboard.subAll')}
           status={statusNode}
+          onGuide={() => setGuideOpen(true)}
           onRefresh={handleRefresh}
           onLogout={handleLogout}
         />
@@ -285,6 +288,7 @@ export default function DashboardPage() {
             </>
           ) : null}
         </main>
+        <GuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
       </div>
     </TooltipProvider>
   )

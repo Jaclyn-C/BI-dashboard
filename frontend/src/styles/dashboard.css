@@ -848,3 +848,83 @@ tbody tr.row-excluded:hover {
   border-radius: 2px;
   vertical-align: middle;
 }
+
+/* ---------- 数据说明弹窗（GuideModal，参考实现没有的新增件） ---------- */
+.guide-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.38);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 6vh 16px 16px;
+  z-index: 60;
+}
+.guide-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  width: min(760px, 100%);
+  max-height: 84vh;
+  display: flex;
+  flex-direction: column;
+}
+.guide-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.guide-head h2 {
+  font-size: 17px;
+  font-weight: 500;
+  margin: 0;
+}
+.guide-sub {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+.guide-body {
+  overflow-y: auto;
+  padding: 6px 22px 22px;
+}
+.guide-section {
+  margin-top: 18px;
+}
+.guide-section h3 {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink2);
+  margin: 0 0 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--grid);
+}
+.guide-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 200px) 1fr;
+  gap: 4px 18px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--series-softer);
+}
+.guide-row:last-child {
+  border-bottom: none;
+}
+.guide-term {
+  font-size: 13px;
+  font-weight: 500;
+}
+.guide-desc {
+  font-size: 13px;
+  color: var(--ink2);
+  line-height: 1.55;
+}
+@media (max-width: 640px) {
+  .guide-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

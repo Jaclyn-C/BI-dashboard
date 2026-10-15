@@ -225,5 +225,73 @@
     "upstreamFailBodySync": " Showing data from the last successful sync.",
     "syncRejected": "A sync is already running — showing its progress.",
     "hCreateTime": "Time (UTC)"
+  },
+  "guide": {
+    "open": "Data Guide",
+    "close": "Close",
+    "title": "Data Guide",
+    "sub": "Page layout · metric definitions · how things are calculated",
+    "sections": [
+      {
+        "h": "Overview",
+        "rows": [
+          ["What this page is", "A full picture of your revenue-share business: upstream short-drama CPS paid orders plus channel ad revenue. Data is synced automatically from the upstream open API into our database; the page shows aggregated results."],
+          ["Data source", "Upstream netshort CPS open API — paid orders (order/list) and daily ad revenue (adSummary)."],
+          ["Refresh cadence", "Automatic sync every 30 minutes; the ↻ button re-syncs the selected range on demand. Each sync re-pulls the last 3 days, self-healing missed orders and the latest refund states."],
+          ["Time & timezone", "Order times are UTC; data is aggregated by calendar day."],
+          ["Today's data", "Upstream reporting lags — today's orders and ad revenue are incomplete until they finalize the next day. Treat same-day numbers as trend indications."]
+        ]
+      },
+      {
+        "h": "Order classification: included / excluded",
+        "rows": [
+          ["Rule", "Each order number is hashed with a private salt (sha256). The lowest 80% of the value space is classified as included, the top 20% as excluded. Amount, time, and refund status play no role."],
+          ["Stability", "The verdict for a given order number never changes (a pure deterministic function)."],
+          ["Included", "Sent to the supplier and settled at original amount × 50%."],
+          ["Excluded", "Never sent to the supplier; visible to us only. The corresponding 50% share is the \"savings from hiding\"."],
+          ["Dataset switch", "The top bar (included / excluded / all) filters every card, chart, and table on the page to the selected set."]
+        ]
+      },
+      {
+        "h": "KPI cards",
+        "rows": [
+          ["Total orders", "Count of all orders in range (included + excluded, refunded included). Aux line: completed / refunded / missing-USD counts."],
+          ["Total order amount (USD)", "Σ upstream-reported USD across all orders. Refunded orders are included; orders lacking a reported USD amount contribute no amount (count only)."],
+          ["Your share (70%)", "Σ all-order amounts × 70% (excluded and refunded included) — your cut from the upstream partner."],
+          ["Supplier payable (theoretical)", "What you would owe if nothing were hidden: Σ all orders × 50%."],
+          ["Supplier paid (actual)", "What is actually settled: Σ included orders × 50%."],
+          ["Savings from hiding", "Payable − paid, i.e. the amount attributable to excluded orders."],
+          ["Expected net profit", "Your share − theoretical payable = all orders × 20%."],
+          ["Actual net profit", "Your share − supplier paid. Higher than expected because ~20% of orders are hidden."],
+          ["Total actual net profit", "Actual net profit + ad revenue — the total that lands in your pocket."],
+          ["Refunded amount", "Σ original amounts of refunded orders. Note: refunded orders still count toward every amount card above (no deduction)."],
+          ["Included / excluded cards", "Order counts and original-amount totals for each set."],
+          ["Ad revenue", "Σ daily ad revenue in range (reported by upstream per day; channel pure-new-user basis). Today's value is not final."],
+          ["Countries/regions", "Number of countries covered and the top country (inferred from order language)."]
+        ]
+      },
+      {
+        "h": "Charts & modules",
+        "rows": [
+          ["Daily revenue · estimate (fixed rates)", "Daily completed-order revenue stacked by currency; native amounts converted to USD via a fixed rate table (legacy caliber). Toggles between gross and earnings views."],
+          ["Daily revenue · upstream USD", "Daily completed orders using upstream-reported USD directly (new caliber). Both charts share a y-axis for easy comparison."],
+          ["Refund caliber", "These two daily charts count completed orders only — refunded orders are excluded, unlike the KPI amount cards (see Caliber notes)."],
+          ["Daily ad revenue", "Upstream-reported daily ad revenue for channel pure-new-users (USD)."],
+          ["Revenue by currency (comparison)", "Legacy caliber (native × fixed rate) vs new caliber (upstream USD), compared currency by currency, to reconcile the two USD figures."],
+          ["Revenue by country/region", "Traffic origin inferred from order language; completed orders; USD caliber."],
+          ["Order details", "Row-level list with currency / status / class filters, sorting, and paging. \"Amount\" is the native currency; \"estimated USD\" is the legacy conversion. The CSV \"share ratio / share earnings\" columns are reserved and currently empty."],
+          ["CSV export", "\"Current view\" exports with current filters and sort; \"All orders\" exports the entire range."]
+        ]
+      },
+      {
+        "h": "Caliber notes",
+        "rows": [
+          ["Refund asymmetry (key)", "KPI amount cards (total, 70% share, payable/paid, profits) include refunded orders; the daily charts, currency comparison, and country breakdown include completed orders only. Both calibers coexist by design — check refunds first when numbers disagree."],
+          ["Precision", "All amounts are computed server-side in exact decimal arithmetic; cards show true values (up to 4 decimal places), never rounded."],
+          ["Native vs USD", "The detail table's \"amount\" is the native currency; every aggregated figure is USD — either upstream-reported or fixed-rate estimated, as labeled on the card."],
+          ["Degradation", "If the upstream API is down, the page shows data from the last successful sync, with a banner noting the lag."]
+        ]
+      }
+    ]
   }
 }

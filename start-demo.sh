@@ -36,7 +36,7 @@ else
   done
 fi
 [ -n "$FRONT_PORT" ] || { echo "    前端启动失败，看 /tmp/pd-vite.log"; exit 1; }
-echo "    OK（端口 $FRONT_PORT，日志: /tmp/pd-vite.log）"
+echo "    OK（端口 ${FRONT_PORT}，日志: /tmp/pd-vite.log）"
 
 echo "==> 4/4 公网隧道"
 if pgrep -f "cloudflared tunnel" >/dev/null 2>&1; then

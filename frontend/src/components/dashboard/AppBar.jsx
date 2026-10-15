@@ -21,7 +21,7 @@ export function StatusLine({ dot, text, note }) {
   )
 }
 
-export default function AppBar({ sub, status, onGuide, onRefresh, onLogout }) {
+export default function AppBar({ sub, status, nav, onGuide, onRefresh, onLogout }) {
   const { t, i18n } = useTranslation()
 
   const toggleLang = useCallback(() => {
@@ -36,9 +36,16 @@ export default function AppBar({ sub, status, onGuide, onRefresh, onLogout }) {
       </div>
       <div className="spacer" />
       {status}
-      <button type="button" className="chip" onClick={onGuide}>
-        {t('guide.open')}
-      </button>
+      {nav ? (
+        <button type="button" className="chip" onClick={nav.onClick}>
+          {nav.label}
+        </button>
+      ) : null}
+      {onGuide ? (
+        <button type="button" className="chip" onClick={onGuide}>
+          {t('guide.open')}
+        </button>
+      ) : null}
       <button type="button" className="chip" onClick={toggleLang} aria-label={t('common.languageSwitch')}>
         {t('common.languageSwitch')}
       </button>

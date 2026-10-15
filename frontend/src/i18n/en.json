@@ -6,7 +6,8 @@
       "login": "Sign in · Partner Dashboard",
       "register": "Create account · Partner Dashboard",
       "forgot": "Reset password · Partner Dashboard",
-      "dashboard": "Partner Dashboard"
+      "dashboard": "Partner Dashboard",
+      "customer": "Customer-visible orders · Partner Dashboard"
     }
   },
   "auth": {
@@ -215,6 +216,14 @@
     "upstreamFailBodySync": " Showing data from the last successful sync.",
     "syncRejected": "A sync is already running — showing its progress.",
     "hCreateTime": "Time (UTC)"
+  },
+  "customer": {
+    "navTo": "Customer view",
+    "navBack": "Back to dashboard",
+    "subBar": "Orders visible to downstream customers · exactly what the supplier API returns",
+    "title": "Customer-visible orders",
+    "ordersSub": "{{m}} total · showing {{n}}",
+    "note": "This page shows exactly what downstream customers can see via our API: order information only, with no classification or exclusion fields."
   },
   "guide": {
     "open": "Data Guide",

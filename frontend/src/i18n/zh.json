@@ -6,7 +6,8 @@
       "login": "登录 · 合作方数据看板",
       "register": "注册账号 · 合作方数据看板",
       "forgot": "重置密码 · 合作方数据看板",
-      "dashboard": "合作方数据看板"
+      "dashboard": "合作方数据看板",
+      "customer": "客户可见订单 · 合作方数据看板"
     }
   },
   "auth": {
@@ -215,6 +216,14 @@
     "upstreamFailBodySync": " 已显示最近一次成功同步的数据。",
     "syncRejected": "已有同步正在进行，正在展示其进度。",
     "hCreateTime": "时间（UTC）"
+  },
+  "customer": {
+    "navTo": "客户视图",
+    "navBack": "返回看板",
+    "subBar": "下游客户可见订单 · 即供应商接口返回的全部数据",
+    "title": "客户可见订单",
+    "ordersSub": "共 {{m}} 笔 · 当前显示 {{n}} 笔",
+    "note": "本页即下游客户调用我方接口能看到的数据：仅订单本身的信息，不含任何分类或剔除相关字段。"
   },
   "guide": {
     "open": "数据说明",

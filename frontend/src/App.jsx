@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import useAuth from './auth/useAuth'
 import DashboardPage from './pages/DashboardPage'
+import CustomerViewPage from './pages/CustomerViewPage'
 import ForgotPage from './pages/auth/ForgotPage'
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
@@ -58,6 +59,14 @@ export default function App() {
         element={
           <RequireAuth>
             <DashboardPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/customer"
+        element={
+          <RequireAuth>
+            <CustomerViewPage />
           </RequireAuth>
         }
       />

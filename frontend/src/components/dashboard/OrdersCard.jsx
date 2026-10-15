@@ -24,9 +24,12 @@ const classLabel = (t, value) => {
  *          classValue: string, classLocked: boolean,
  *          sort: {key: string, dir: string}, page: number,
  *          onFilterChange: (patch: object) => void,
- *          onSort: (key: string) => void, onPageChange: (page: number) => void}} props
+ *          onSort: (key: string) => void, onPageChange: (page: number) => void,
+ *          hideClass?: boolean, title?: string, sub?: string}} props
+ * hideClass=true → 客户视图变体（REQ-20261015-02）：无类别列、无类别筛选；
+ * title/sub 可覆盖默认标题与副标题。
  */
-export default function OrdersCard({ data, fmt, filters, classValue, classLocked, sort, page, onFilterChange, onSort, onPageChange }) {
+export default function OrdersCard({ data, fmt, filters, classValue, classLocked, sort, page, onFilterChange, onSort, onPageChange, hideClass = false, title, sub }) {
   const { t } = useTranslation()
   const [pageInput, setPageInput] = useState('')
   const unknownLabel = t('dashboard.unknownCountry')
@@ -78,7 +81,7 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
               {sortTh(t('dashboard.hCurrency'), 'currency', false)}
               {sortTh(t('dashboard.hAmount'), 'amount', true)}
               {sortTh(t('dashboard.hEstUsd'), 'usd', true)}
-              <th>{t('dashboard.hClass')}</th>
+              {hideClass ? null : <th>{t('dashboard.hClass')}</th>}
               <th>{t('dashboard.hStatus')}</th>
             </tr>
           </thead>
@@ -91,7 +94,7 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
                 <td>{o.currency}</td>
                 <td className="num">{nativeMoney(fmt, o.amount)}</td>
                 <td className="num">{o.usd == null ? '—' : money(fmt, o.usd)}</td>
-                <td className="muted">{classLabel(t, o.order_class)}</td>
+                {hideClass ? null : <td className="muted">{classLabel(t, o.order_class)}</td>}
                 <td>
                   {o.status === 'returned' ? (
                     <span className="chip-status returned">{`↩ ${t('dashboard.stReturned')}`}</span>
@@ -123,23 +126,29 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
   return (
     <section className="card">
       <div className="cardhead">
-        <h2>{t('dashboard.ordersTitle')}</h2>
-        <span className="sub">{t('dashboard.ordersSub', { n: intNum(fmt, total), m: intNum(fmt, totalInRange) })}</span>
+        <h2>{title || t('dashboard.ordersTitle')}</h2>
+        <span className="sub">
+          {sub || t('dashboard.ordersSub', { n: intNum(fmt, total), m: intNum(fmt, totalInRange) })}
+        </span>
         <div className="right">
-          <label className="visually-hidden" htmlFor="typeFilter">
-            {t('dashboard.hClass')}
-          </label>
-          <select
-            className="field"
-            id="typeFilter"
-            value={classValue}
-            disabled={classLocked}
-            onChange={(e) => onFilterChange({ klass: e.target.value })}
-          >
-            <option value="all">{t('dashboard.fAllClasses')}</option>
-            <option value="included">{t('dashboard.clIncluded')}</option>
-            <option value="excluded">{t('dashboard.clExcluded')}</option>
-          </select>
+          {hideClass ? null : (
+            <>
+              <label className="visually-hidden" htmlFor="typeFilter">
+                {t('dashboard.hClass')}
+              </label>
+              <select
+                className="field"
+                id="typeFilter"
+                value={classValue}
+                disabled={classLocked}
+                onChange={(e) => onFilterChange({ klass: e.target.value })}
+              >
+                <option value="all">{t('dashboard.fAllClasses')}</option>
+                <option value="included">{t('dashboard.clIncluded')}</option>
+                <option value="excluded">{t('dashboard.clExcluded')}</option>
+              </select>
+            </>
+          )}
           <label className="visually-hidden" htmlFor="currencyFilter">
             {t('dashboard.hCurrency')}
           </label>

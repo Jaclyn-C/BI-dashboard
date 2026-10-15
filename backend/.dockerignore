@@ -1,0 +1,6 @@
+# 构建上下文只留源码与依赖清单，防本地杂物进镜像
+.venv
+__pycache__
+*.egg-info
+tests
+.env

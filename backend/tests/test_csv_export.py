@@ -13,6 +13,7 @@ import pytest
 
 from app.services.csv_export import (
     CSV_HEADERS,
+    CUSTOMER_CSV_HEADERS,
     UNKNOWN_COUNTRY_LABEL,
     country_display,
     csv_cell,
@@ -248,3 +249,56 @@ def test_orders_csv_range_validation(client, auth, db_session):
     )
     assert resp.status_code == 422
     assert resp.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+# ---------- 客户视图 CSV（REQ-20261015-02：included-only + 当前筛选全量 + 7 列） ----------
+
+CUSTOMER_API = "/api/v1/dashboard/customer-orders.csv"
+
+
+def test_customer_csv_en(client, auth, db_session):
+    seed_csv_orders(db_session)
+    resp = client.get(f"{CUSTOMER_API}", params=RANGE, headers=auth)
+    assert resp.status_code == 200
+    assert resp.headers["content-disposition"] == (
+        'attachment; filename="customer_orders_2026-10-01_to_2026-10-02.csv"'
+    )
+    raw = resp.content
+    assert raw.startswith(b"\xef\xbb\xbf")  # BOM（同 orders.csv 约定）
+    text = raw.decode("utf-8")
+    assert not text.endswith("\r\n")  # CRLF 行连接、无行尾 CRLF
+    lines = text.split("\r\n")
+    assert lines[0] == "\ufeff" + ",".join(CUSTOMER_CSV_HEADERS["en"])
+    # included-only（seed：A/D included，B/C excluded）+ date desc → D, A
+    assert [line.split(",")[0] for line in lines[1:]] == ["D", "A"]
+    parsed = list(csv.reader(io.StringIO(text)))
+    assert all(len(row) == 7 for row in parsed)
+    rows = {row[0]: row for row in parsed[1:]}
+    # 纯订单信息：金额两位小数、usd 缺失空、状态冻结词、国名本地化
+    assert rows["D"][4] == "9.00" and rows["D"][5] == "9.00"
+    assert rows["D"][6] == "Returned" and rows["A"][6] == "Completed"
+    assert rows["A"][2] == "Mexico"
+    # 红线：输出中不存在任何分类字段/文案
+    assert "class" not in text and "Included" not in text and "Excluded" not in text
+
+
+def test_customer_csv_zh_headers_and_words(client, auth, db_session):
+    seed_csv_orders(db_session)
+    resp = client.get(f"{CUSTOMER_API}", params={**RANGE, "lang": "zh"}, headers=auth)
+    lines = resp.content.decode("utf-8").split("\r\n")
+    assert lines[0] == "\ufeff" + ",".join(CUSTOMER_CSV_HEADERS["zh"])
+    rows = {row[0]: row for row in list(csv.reader(io.StringIO("\r\n".join(lines))))[1:]}
+    assert rows["D"][6] == "已退款" and rows["A"][6] == "已完成"
+    assert rows["A"][2] == "墨西哥"
+
+
+def test_customer_csv_filters_and_sort(client, auth, db_session):
+    """币种筛选收窄行集；排序方向生效（与 /customer-orders 同参同序，跨页全量）。"""
+    seed_csv_orders(db_session)
+    resp = client.get(
+        f"{CUSTOMER_API}",
+        params={**RANGE, "currency": "MXN", "sort": "amount", "dir": "asc"},
+        headers=auth,
+    )
+    assert [line.split(",")[0]
+            for line in resp.content.decode("utf-8").split("\r\n")[1:]] == ["A"]

@@ -82,6 +82,7 @@ RANGE = {"from": "2026-10-01", "to": "2026-10-02"}
         ("get", "/orders"),
         ("get", "/orders.csv"),
         ("get", "/customer-orders"),
+        ("get", "/customer-orders.csv"),
         ("post", "/sync"),
         ("get", "/sync/status"),
     ],

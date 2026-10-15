@@ -122,6 +122,75 @@ def csv_filename(date_from: date, date_to: date) -> str:
     return f"orders_all_{date_from.isoformat()}_to_{date_to.isoformat()}.csv"
 
 
+#: 客户视图 CSV 表头（7 列 = 客户视图表格可见列，REQ-20261015-02）
+CUSTOMER_CSV_HEADERS: dict[str, list[str]] = {
+    "en": ["orderId", "createTime", "country", "currency", "amount", "estUsd", "status"],
+    "zh": ["订单编号", "创建时间", "国家/地区", "币种", "金额", "预估美元", "状态"],
+}
+
+
+def _customer_row_values(order: Order, lang: str) -> list[str]:
+    """客户视图一行 7 列：纯订单信息，不含 order_class 等任何分类字段（红线 §9-12）。"""
+    status = "returned" if order.is_returned else "completed"
+    return [
+        order.order_id or "",
+        order.create_time or "",
+        country_display(country_key(order.language), lang),
+        order.currency_type or "",
+        money_str(order.amount_minor),
+        (
+            money_str(order.usd_order_amount_minor)
+            if order.usd_order_amount_minor is not None
+            else ""
+        ),
+        STATUS_WORDS[lang][status],
+    ]
+
+
+def customer_csv_filename(date_from: date, date_to: date) -> str:
+    """customer_orders_{from}_to_{to}.csv（当前筛选全量行，不分页）。"""
+    return f"customer_orders_{date_from.isoformat()}_to_{date_to.isoformat()}.csv"
+
+
+def iter_customer_csv_chunks(
+    db,
+    date_from: date,
+    date_to: date,
+    *,
+    currency: str = "all",
+    status: str = "all",
+    sort: str = "date",
+    direction: str = "desc",
+    lang: str = "en",
+) -> Iterator[str]:
+    """客户视图 CSV：与 /customer-orders 同参同序，导出当前筛选**全部行**（跨页）。
+
+    included-only（order_class 固定 included）+ 表格级筛选/排序，无分页；
+    流式产出（yield_per + 分块拼接），策略同 iter_csv_chunks。
+    """
+    stmt = apply_sort(
+        orders_query(
+            date_from,
+            date_to,
+            currency=currency,
+            status=status,  # type: ignore[arg-type]
+            order_class="included",
+        ),
+        sort,  # type: ignore[arg-type]
+        direction,  # type: ignore[arg-type]
+    )
+    result = db.execute(stmt.execution_options(yield_per=_YIELD_PER)).scalars()
+
+    buffer: list[str] = ["\ufeff" + ",".join(csv_cell(h) for h in CUSTOMER_CSV_HEADERS[lang])]
+    for order in result:
+        buffer.append(",".join(csv_cell(v) for v in _customer_row_values(order, lang)))
+        if len(buffer) > _CHUNK_ROWS:
+            yield "\r\n".join(buffer)
+            buffer = []
+    if buffer:
+        yield "\r\n".join(buffer)
+
+
 def iter_csv_chunks(
     db,
     date_from: date,

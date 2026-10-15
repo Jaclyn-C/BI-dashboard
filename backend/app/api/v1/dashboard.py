@@ -7,6 +7,8 @@
 - GET  /dashboard/summary      一次装载全看板（§5.2）
 - GET  /dashboard/orders       订单分页表（§5.3）
 - GET  /dashboard/orders.csv   CSV 导出（§5.4，B-T8）
+- GET  /dashboard/customer-orders     客户视图订单表（REQ-20261015-02）
+- GET  /dashboard/customer-orders.csv 客户视图当前页 CSV（REQ-20261015-02）
 - POST /dashboard/sync         手动刷新（202 + 进度轮询，§5.5）
 - GET  /dashboard/sync/status
 """
@@ -205,6 +207,46 @@ def customer_orders(
         total=total,
         total_in_range=total_in_range,
         currencies=orders_query.range_currencies(db, date_from, date_to),
+    )
+
+
+@router.get(
+    "/customer-orders.csv",
+    summary="客户视图订单 CSV（当前筛选全量）",
+    description="与 /customer-orders 同参同序，导出当前筛选**全部行**（跨页）的 7 列纯订单信息"
+    "（included-only，不含任何分类字段）。UTF-8 BOM + CRLF；"
+    "文件名 customer_orders_{from}_to_{to}.csv。",
+)
+def customer_orders_csv(
+    date_from: RangeFrom,
+    date_to: RangeTo,
+    currency: str = Query(default="all", description="币种筛选：all 或币种码"),
+    status: StatusFilter = Query(default="all"),
+    sort: SortKey = Query(default="date"),
+    direction: SortDir = Query(default="desc", alias="dir"),
+    lang: CsvLang = Query(default="en"),
+    db: Session = Depends(get_db),
+) -> StreamingResponse:
+    """GET /dashboard/customer-orders.csv：included-only + 当前筛选全量 + 字段后端裁剪。"""
+    date_from, date_to = parse_range(date_from, date_to)
+    return StreamingResponse(
+        csv_export.iter_customer_csv_chunks(
+            db,
+            date_from,
+            date_to,
+            currency=currency,
+            status=status,
+            sort=sort,
+            direction=direction,
+            lang=lang,
+        ),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": (
+                'attachment; filename="'
+                f'{csv_export.customer_csv_filename(date_from, date_to)}"'
+            )
+        },
     )
 
 

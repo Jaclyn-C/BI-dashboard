@@ -517,7 +517,8 @@ svg text {
   position: fixed;
   z-index: 60;
   pointer-events: none;
-  display: none;
+  /* 无 display:none —— React 移植后 .tip 由 Tooltip.jsx 条件渲染挂载，
+     原静态 display:none 会让全站图表悬停提示永远不可见（2026-10-15 修复） */
   max-width: 280px;
   background: var(--surface);
   border: 1px solid var(--border);

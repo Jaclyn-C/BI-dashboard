@@ -1,6 +1,7 @@
 # CLAUDE.md — Partner Dashboard 数据平台 总规则
 
 > 本文件是所有 Agent 在本仓库工作的总规则。详细知识见 `.claude/memory/`（business / api / architecture / deployment / coding-standard）。Agent 定义见 `.claude/agents/`，协作流程见 `.claude/workflows/`。
+> **双文件镜像**：仓库根的 AGENTS.md 与 CLAUDE.md 内容完全一致——修改任一个后，必须将同一修改同步到另一个（整文件复制即可）。
 
 ## 1. 项目介绍
 
@@ -75,7 +76,11 @@ partner-dashboard/
       └─ i18n/                      ← en / zh
 ```
 
-## 4. 后端开发规范
+## 4. Ponytail 基线（前后端通用）
+
+代码生成与代码审查一律按 Ponytail（懒高级开发者基线）执行——最小完整变更、优先复用既有实现、不加没人要的抽象/选项/配置、无死代码与魔法值、新增非平凡逻辑配一条最小测试；环境里有 ponytail skill 时直接调用，没有则按本条自查。
+
+## 5. 后端开发规范
 
 - 分层：`api/`（路由，薄）→ `services/`（业务逻辑）→ `models/`（ORM）；上游调用只出现在 `upstream/`，禁止在路由里直接 httpx。
 - **金额纪律**：一切金额/汇率计算用 `decimal.Decimal`，数据库列用 `Numeric`，**禁止 float**。前端不做金额运算，只渲染后端给定的值。
@@ -85,7 +90,7 @@ partner-dashboard/
 - 错误处理：上游不可用时降级（返回已落库数据 + 状态标记），不允许 500 裸奔。
 - 验证义务：改动后至少 `ruff check .` + `pytest`（能跑的范围），结果如实报告。
 
-## 5. 前端开发规范
+## 6. 前端开发规范
 
 - **沿用 JS**（非 TS）；函数组件 + hooks；页面放 `src/pages/`，可复用 UI 放 `src/components/`。
 - 请求统一走 `src/api/` 封装的 client，禁止组件内裸 fetch/axios 散落。
@@ -95,21 +100,21 @@ partner-dashboard/
 - **极简风格，禁止图标**：不引入任何图标库（react-icons / lucide / 组件库 icons 等），不使用 emoji 作为界面元素；视觉表达靠文字、排版与留白，风格对标参考 HTML。复刻参考实现既有控件时，其中的文本字形（↻ ✓ ↓ 等）可原样保留，不得新增。
 - 验证义务：改动后至少 `pnpm lint`；涉及构建配置时 `pnpm build`。
 
-## 6. 下游供应商接口规范
+## 7. 下游供应商接口规范
 
 - 鉴权：每供应商独立 API key，数据按供应商隔离——A 绝不可能看到 B 的数据（reviewer 重点检查项）。
 - 契约稳定：已发布的下游接口入出参只加不破（向后兼容）；破坏性变更走 `/api/v2`。
 - 接口文档：FastAPI 自动生成的 OpenAPI（`/docs`）即对外文档，tag/描述要写清楚——这是给供应商看的东西。
 
-## 7. Git 规范
+## 8. Git 规范
 
-- **禁止直接在 main 上开发**：任何变更先建 `feature/<REQ编号>-<简述>` 分支（如 `feature/REQ-20261012-01-supplier-api`），提交前走 review-flow。
+- **禁止直接在 main/master 上开发**：任何变更先建 `feature/<REQ编号>-<简述>` 分支（如 `feature/REQ-20261012-01-supplier-api`），提交前走 review-flow。
 - 提交信息 `type(scope): 中文描述（REQ 编号）`，scope ∈ `api`（后端）/ `web`（前端）/ `db`（迁移）/ `ai`（agent 配置与 memory）/ `docs`；一次提交聚焦一件事，跨前后端拆开提交。
 - 禁止提交：`.env`、`node_modules/`、`dist/`、`__pycache__/`、`.venv/`、`.claude/settings.local.json`、数据库备份文件。
 - 远端仓库：GitHub `Jaclyn-C/BI-dashboard`（用户创建并授权的**受控远端**，2026-10-12 起）。**推送时机：每个功能经用户验证确认后**由主对话执行 push，review-flow 之外不推。
 - 历史版本中出现过真实凭据（已全部抹除并重写历史）——**任何残留凭据外泄都是事故**；除上述受控远端外严禁推送任何其他仓库。
 
-## 8. Agent 协作规则
+## 9. Agent 协作规则
 
 - **知识优先**：接任务先查 `.claude/memory/` 对应文档；发现 memory 与代码/现实不符时，以现实为准并更新 memory。
 - **口径变更走流程**：分成比例、汇率口径、聚合规则、数据集定义的任何变更，必须有对应 REQ 文档；reviewer 见到"无 REQ 的口径变更"直接 blocker。
@@ -117,7 +122,7 @@ partner-dashboard/
 - **如实报告**：验证报告必须区分 已验证 / 未验证（附原因）；禁止把未验证项写成通过。
 - **不确定即问**：涉及对外契约（下游接口）、凭据管理、部署的改动，先向用户确认。
 
-## 9. 禁止事项
+## 10. 禁止事项
 
 1. **禁止**在代码、配置、日志、迁移、提交中出现真实凭据（上游 OAuth 凭据、数据库密码、供应商 API key、测试账号密码）——一律 `.env`，模板进 `.env.example`。
 2. **禁止**改动业务口径（分成/汇率/聚合/数据集定义）而不走需求流程。
@@ -131,4 +136,4 @@ partner-dashboard/
 10. **禁止**跳过验证义务（对应侧 ruff/pytest/eslint 至少跑一次并如实报告）。
 11. **禁止**在运行时调用前开发自建后端（api.tfctechnology.com）作为依赖（仅 Phase 0 数据记录器例外）；新系统出站只允许调飞书文档内的 8 个上游接口。
 12. **禁止**在分类规则确认（planning/02 B1）前用猜测规则实现订单分类器，或对外输出 20%/70% 分类金额——宁出全量视图，不出错误的钱。
-13. **禁止**引入图标库或以 emoji 作为界面图标——前端走极简文字风格（对标参考 HTML，详见第 5 节）。
+13. **禁止**引入图标库或以 emoji 作为界面图标——前端走极简文字风格（对标参考 HTML，详见第 6 节）。

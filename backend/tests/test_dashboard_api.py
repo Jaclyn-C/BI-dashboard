@@ -81,6 +81,7 @@ RANGE = {"from": "2026-10-01", "to": "2026-10-02"}
         ("get", "/summary"),
         ("get", "/orders"),
         ("get", "/orders.csv"),
+        ("get", "/customer-orders"),
         ("post", "/sync"),
         ("get", "/sync/status"),
     ],
@@ -274,3 +275,37 @@ def test_sync_status_reports_last_run(client, auth, db_session):
     assert body["last_run"]["status"] == "partial"
     assert body["last_run"]["truncated_days"] == ["2026-10-01"]
     assert body["last_run"]["orders_error"] is None
+
+
+# ---------- 客户视图（REQ-20261015-02：included-only + 无分类字段） ----------
+
+
+def test_customer_orders_included_only_and_no_class_fields(client, auth, db_session):
+    seed_orders(db_session)
+    resp = client.get(f"{API}/customer-orders", params=RANGE, headers=auth)
+    assert resp.status_code == 200
+    body = resp.json()
+    # 仅已计入订单（seed 中 A/C included；B/D/E excluded 不出现）
+    assert [r["order_id"] for r in body["rows"]] == ["C", "A"]  # 默认 date desc
+    assert body["total"] == 2 and body["total_in_range"] == 2
+    # 红线：响应中不存在任何分类字段/键名
+    assert "order_class" not in resp.text
+    assert "class" not in resp.text.replace("country_key", "")
+    # 行字段集（纯订单信息）
+    assert set(body["rows"][0]) == {
+        "order_id", "create_time", "country_key", "language",
+        "currency", "amount", "usd", "status",
+    }
+
+
+def test_customer_orders_currency_filter_and_paging(client, auth, db_session):
+    seed_orders(db_session)
+    resp = client.get(
+        f"{API}/customer-orders",
+        params={**RANGE, "currency": "MXN"},
+        headers=auth,
+    )
+    body = resp.json()
+    assert [r["order_id"] for r in body["rows"]] == ["A"]
+    # 分页元数据齐备（page_size=25 > total → 单页）
+    assert (body["page"], body["page_size"], body["pages"]) == (1, 25, 1)

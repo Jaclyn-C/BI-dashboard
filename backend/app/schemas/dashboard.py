@@ -184,6 +184,29 @@ class OrdersResponse(BaseModel):
     currencies: list[str]
 
 
+class CustomerOrderRow(BaseModel):
+    """客户视图行（REQ-20261015-02）：纯订单信息，不含 order_class 等任何内部分类字段。"""
+
+    order_id: str
+    create_time: str
+    country_key: str
+    language: str | None
+    currency: str
+    amount: str
+    usd: str | None
+    status: Literal["completed", "returned"]
+
+
+class CustomerOrdersResponse(BaseModel):
+    rows: list[CustomerOrderRow]
+    page: int
+    page_size: int
+    pages: int
+    total: int
+    total_in_range: int
+    currencies: list[str]
+
+
 class SyncRequest(BaseModel):
     """POST /dashboard/sync 入参（当前视图区间；服务端按 §3.3.2 钳制）。"""
 

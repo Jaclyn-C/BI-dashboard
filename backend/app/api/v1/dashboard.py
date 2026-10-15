@@ -28,6 +28,8 @@ from app.schemas.dashboard import (
     ClassFilter,
     CsvLang,
     CsvScope,
+    CustomerOrderRow,
+    CustomerOrdersResponse,
     OrderRow,
     OrdersResponse,
     SortDir,
@@ -134,6 +136,65 @@ def orders(
                     else None
                 ),
                 order_class=row.order_class,  # tag 真值（REQ-20261014-01）
+                status="returned" if row.is_returned else "completed",
+            )
+            for row in rows
+        ],
+        page=page,
+        page_size=TABLE_PAGE_SIZE,
+        pages=pages,
+        total=total,
+        total_in_range=total_in_range,
+        currencies=orders_query.range_currencies(db, date_from, date_to),
+    )
+
+
+@router.get(
+    "/customer-orders",
+    response_model=CustomerOrdersResponse,
+    summary="客户视图订单表（下游可见数据预览，REQ-20261015-02）",
+    description="仅返回已计入（included）订单的纯订单信息——不含 order_class/tag 等"
+    "任何内部分类字段（字段裁剪在后端完成）。未来供应商接口以此字段集为契约起点。",
+)
+def customer_orders(
+    date_from: RangeFrom,
+    date_to: RangeTo,
+    currency: str = Query(default="all", description="币种筛选：all 或币种码"),
+    status: StatusFilter = Query(default="all"),
+    sort: SortKey = Query(default="date"),
+    direction: SortDir = Query(default="desc", alias="dir"),
+    page: int = Query(default=1, ge=1),
+    db: Session = Depends(get_db),
+) -> CustomerOrdersResponse:
+    """GET /dashboard/customer-orders：included-only + 内部字段后端裁剪。"""
+    date_from, date_to = parse_range(date_from, date_to)
+    base = orders_query.orders_query(
+        date_from, date_to, currency=currency, status=status, order_class="included"
+    )
+    total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
+    base_all = orders_query.orders_query(date_from, date_to, order_class="included")
+    total_in_range = db.scalar(select(func.count()).select_from(base_all.subquery())) or 0
+
+    stmt = orders_query.apply_sort(base, sort, direction).offset(
+        (page - 1) * TABLE_PAGE_SIZE
+    ).limit(TABLE_PAGE_SIZE)
+    rows = db.scalars(stmt).all()
+    pages, _ = orders_query.paginate(total, page)
+
+    return CustomerOrdersResponse(
+        rows=[
+            CustomerOrderRow(
+                order_id=row.order_id,
+                create_time=row.create_time,
+                country_key=aggregation.country_key(row.language),
+                language=row.language,
+                currency=row.currency_type,
+                amount=money_str(row.amount_minor),
+                usd=(
+                    money_str(row.usd_order_amount_minor)
+                    if row.usd_order_amount_minor is not None
+                    else None
+                ),
                 status="returned" if row.is_returned else "completed",
             )
             for row in rows

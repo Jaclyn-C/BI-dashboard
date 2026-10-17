@@ -1,5 +1,5 @@
 # 生产编排：postgres（不暴露公网）+ api + web（Caddy：静态托管 + 反代 + 自动 HTTPS）
-# 使用与升级流程见 docs/deployment/部署指南.md；配置在根目录 .env（模板 .env.prod.example）。
+# 使用与升级流程见 docs/deployment/按量开关部署手册.md；配置在根目录 .env（模板 .env.prod.example）。
 name: pd-prod
 
 services:

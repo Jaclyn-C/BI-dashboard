@@ -52,7 +52,7 @@ fi
 docker compose -f compose.prod.yaml ps
 echo
 echo "======================================================"
-echo " 部署完成：https://${DOMAIN_VAL}"
+echo " 部署完成：${DOMAIN_VAL}"
 echo " 首次使用：打开网站 → 注册 → 邮箱收验证码（需已配 SMTP）"
-echo " 备份/升级/排障：docs/deployment/部署指南.md"
+echo " 备份/升级/排障：docs/deployment/按量开关部署手册.md"
 echo "======================================================"

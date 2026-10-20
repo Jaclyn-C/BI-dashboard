@@ -5,6 +5,8 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import useAuth from './auth/useAuth'
 import DashboardPage from './pages/DashboardPage'
 import CustomerViewPage from './pages/CustomerViewPage'
+import PendingPage from './pages/PendingPage'
+import UsersPage from './pages/UsersPage'
 import ForgotPage from './pages/auth/ForgotPage'
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
@@ -24,6 +26,28 @@ function RedirectIfAuthed({ children }) {
   const { user, booting } = useAuth()
   if (booting) return null
   if (user) return <Navigate to="/" replace />
+  return children
+}
+
+/** 角色归属主页（REQ-20261020-01）：pending→提示页，customer→客户视图，其余→看板 */
+function homePathFor(role) {
+  if (!role || role === 'pending') return '/pending'
+  if (role === 'customer') return '/customer'
+  return '/'
+}
+
+/** 角色守卫：角色不在 allow 内 → 跳该角色主页（不渲染受限内容） */
+function RequireRole({ allow, children }) {
+  const { user } = useAuth()
+  if (!user) return children // 未登录由外层 RequireAuth 处理
+  if (!allow.includes(user.role)) return <Navigate to={homePathFor(user.role)} replace />
+  return children
+}
+
+/** /pending 专属：非 pending 角色跳自己主页 */
+function PendingOnly({ children }) {
+  const { user } = useAuth()
+  if (user && user.role !== 'pending') return <Navigate to={homePathFor(user.role)} replace />
   return children
 }
 
@@ -58,7 +82,9 @@ export default function App() {
         path="/"
         element={
           <RequireAuth>
-            <DashboardPage />
+            <RequireRole allow={['admin', 'super_admin']}>
+              <DashboardPage />
+            </RequireRole>
           </RequireAuth>
         }
       />
@@ -66,7 +92,29 @@ export default function App() {
         path="/customer"
         element={
           <RequireAuth>
-            <CustomerViewPage />
+            <RequireRole allow={['admin', 'super_admin', 'customer']}>
+              <CustomerViewPage />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/users"
+        element={
+          <RequireAuth>
+            <RequireRole allow={['admin', 'super_admin']}>
+              <UsersPage />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/pending"
+        element={
+          <RequireAuth>
+            <PendingOnly>
+              <PendingPage />
+            </PendingOnly>
           </RequireAuth>
         }
       />

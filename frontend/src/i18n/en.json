@@ -7,7 +7,9 @@
       "register": "Create account · Partner Dashboard",
       "forgot": "Reset password · Partner Dashboard",
       "dashboard": "Partner Dashboard",
-      "customer": "Customer-visible orders · Partner Dashboard"
+      "customer": "Customer-visible orders · Partner Dashboard",
+      "users": "User Management",
+      "pending": "Waiting for Access"
     }
   },
   "auth": {
@@ -59,6 +61,7 @@
       "CODE_SEND_HOURLY_LIMIT": "Too many codes requested. Please try again later.",
       "EMAIL_SEND_FAILED": "The verification email could not be sent. Please try again later.",
       "INTERNAL_ERROR": "Something went wrong on our side. Please try again later.",
+      "FORBIDDEN": "You do not have access to this content",
       "FALLBACK": "Request failed ({{status}}). Please try again."
     },
     "validation": {
@@ -224,6 +227,30 @@
     "title": "Customer-visible orders",
     "ordersSub": "{{m}} total · showing {{n}}",
     "note": "This page shows exactly what downstream customers can see via our API: order information only, with no classification or exclusion fields."
+  },
+  "pending": {
+    "title": "Waiting for access",
+    "hint": "Your account is created. An administrator will assign your access."
+  },
+  "users": {
+    "title": "User Management",
+    "navTo": "Users",
+    "loading": "Loading…",
+    "colEmail": "Email",
+    "colNickname": "Nickname",
+    "colRole": "Role",
+    "colCreatedAt": "Registered",
+    "colLastLogin": "Last Login",
+    "roleSuperAdmin": "Super Admin",
+    "roleAdmin": "Admin",
+    "roleCustomer": "Customer",
+    "rolePending": "Pending",
+    "setAdmin": "Make Admin",
+    "setCustomer": "Make Customer",
+    "revoke": "Revoke Access",
+    "never": "Never",
+    "loadFailed": "Failed to load users",
+    "actionFailed": "Action failed, please retry"
   },
   "guide": {
     "open": "Data Guide",

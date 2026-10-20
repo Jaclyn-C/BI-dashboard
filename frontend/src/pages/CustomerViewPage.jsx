@@ -23,7 +23,7 @@ import OrdersCard from '../components/dashboard/OrdersCard'
 
 export default function CustomerViewPage() {
   const { t, i18n } = useTranslation()
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const navigate = useNavigate()
   usePageTitle('common.pageTitle.customer')
 
@@ -110,7 +110,11 @@ export default function CustomerViewPage() {
     <div className="wrap">
       <AppBar
         sub={t('customer.subBar')}
-        nav={{ label: t('customer.navBack'), onClick: () => navigate('/') }}
+        navs={
+          user && (user.role === 'admin' || user.role === 'super_admin')
+            ? [{ label: t('customer.navBack'), onClick: () => navigate('/') }]
+            : []
+        }
         onRefresh={orders.reload}
         onLogout={handleLogout}
       />

@@ -21,7 +21,7 @@ export function StatusLine({ dot, text, note }) {
   )
 }
 
-export default function AppBar({ sub, status, nav, onGuide, onRefresh, onLogout }) {
+export default function AppBar({ sub, status, navs = [], onGuide, onRefresh, onLogout }) {
   const { t, i18n } = useTranslation()
 
   const toggleLang = useCallback(() => {
@@ -36,11 +36,11 @@ export default function AppBar({ sub, status, nav, onGuide, onRefresh, onLogout 
       </div>
       <div className="spacer" />
       {status}
-      {nav ? (
-        <button type="button" className="chip" onClick={nav.onClick}>
-          {nav.label}
+      {navs.map((item) => (
+        <button key={item.label} type="button" className="chip" onClick={item.onClick}>
+          {item.label}
         </button>
-      ) : null}
+      ))}
       {onGuide ? (
         <button type="button" className="chip" onClick={onGuide}>
           {t('guide.open')}
@@ -49,9 +49,11 @@ export default function AppBar({ sub, status, nav, onGuide, onRefresh, onLogout 
       <button type="button" className="chip" onClick={toggleLang} aria-label={t('common.languageSwitch')}>
         {t('common.languageSwitch')}
       </button>
-      <button type="button" className="chip" onClick={onRefresh}>
-        {t('dashboard.refresh')}
-      </button>
+      {onRefresh ? (
+        <button type="button" className="chip" onClick={onRefresh}>
+          {t('dashboard.refresh')}
+        </button>
+      ) : null}
       <button type="button" className="chip" onClick={onLogout}>
         {t('dashboard.signOut')}
       </button>

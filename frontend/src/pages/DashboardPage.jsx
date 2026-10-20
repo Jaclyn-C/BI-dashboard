@@ -214,7 +214,10 @@ export default function DashboardPage() {
         <AppBar
           sub={t(dataset === 'included' ? 'dashboard.subIncluded' : dataset === 'excluded' ? 'dashboard.subExcluded' : 'dashboard.subAll')}
           status={statusNode}
-          nav={{ label: t('customer.navTo'), onClick: () => navigate('/customer') }}
+          navs={[
+            { label: t('customer.navTo'), onClick: () => navigate('/customer') },
+            { label: t('users.navTo'), onClick: () => navigate('/users') },
+          ]}
           onGuide={() => setGuideOpen(true)}
           onRefresh={handleRefresh}
           onLogout={handleLogout}

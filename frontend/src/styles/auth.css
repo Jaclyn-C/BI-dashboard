@@ -270,3 +270,12 @@
     margin-top: 0;
   }
 }
+
+/* ---------- PendingPage（REQ-20261020-01）：居中提示卡 ---------- */
+.pendingcard {
+  text-align: center;
+}
+
+.pendingcard .chip {
+  margin-top: 8px;
+}

@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://pd:pd@localhost:5432/pd"
     secret_key: str = "dev-only-secret-key-change-me-0123456789"
     access_token_ttl_minutes: int = 480  # Q6：8 小时
+    #: 唯一超管的邮箱（REQ-20261020-01 §1.4）；启动时幂等提权，空 = 跳过
+    super_admin_email: str = ""
 
     # ===== SMTP（空 host + development → 日志降级，§6.4）=====
     smtp_host: str = ""

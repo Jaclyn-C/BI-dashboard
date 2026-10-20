@@ -7,9 +7,26 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
 
+# ===== 角色常量（REQ-20261020-01 §1.1）=====
+ROLE_SUPER_ADMIN = "super_admin"
+ROLE_ADMIN = "admin"
+ROLE_CUSTOMER = "customer"
+ROLE_PENDING = "pending"
+ROLE_ALL = (ROLE_SUPER_ADMIN, ROLE_ADMIN, ROLE_CUSTOMER, ROLE_PENDING)
+#: 等级（REQ §1.3）：只能操作严格低于自己的用户
+ROLE_LEVEL = {
+    ROLE_SUPER_ADMIN: 3,
+    ROLE_ADMIN: 2,
+    ROLE_CUSTOMER: 1,
+    ROLE_PENDING: 0,
+}
+
 
 class User(Base):
-    """内部看板账号：邮箱全局唯一（AC-S4），密码只存 argon2id 摘要（AC-S1）。"""
+    """内部看板账号：邮箱全局唯一（AC-S4），密码只存 argon2id 摘要（AC-S1）。
+
+    角色与等级规则见 REQ-20261020-01（role 常量在本模块）。
+    """
 
     __tablename__ = "users"
 
@@ -23,6 +40,10 @@ class User(Base):
     #: 凭据版本：重置密码 +1，旧 token 因 pwd_ver 不匹配立即失效（Q7）
     credential_version: Mapped[int] = mapped_column(
         Integer, nullable=False, default=1, server_default="1"
+    )
+    #: 角色（REQ-20261020-01）；注册默认 pending，等管理员分配
+    role: Mapped[str] = mapped_column(
+        String(16), nullable=False, default=ROLE_PENDING, server_default=ROLE_PENDING
     )
     #: 注册与登录时更新
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

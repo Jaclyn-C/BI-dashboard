@@ -25,7 +25,8 @@ from app.api.errors import (
 )
 from app.api.v1 import api_router
 from app.config import get_settings
-from app.services import sync_service
+from app.db import SessionLocal
+from app.services import role_service, sync_service
 from app.services.email_sender import LogEmailSender, create_email_sender
 from app.upstream import scheduler as sync_scheduler
 
@@ -39,6 +40,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.email_sender = create_email_sender(settings)
     if isinstance(app.state.email_sender, LogEmailSender):
         logger.warning("SMTP_HOST 未配置且为开发环境：验证码走日志降级（生产禁止）")
+
+    # 超管提权（REQ-20261020-01 §1.4）：幂等；未配置跳过（开发/测试无感）
+    if settings.super_admin_email:
+
+        def _promote_super_admin() -> None:
+            with SessionLocal() as db:
+                role_service.ensure_super_admin(db, settings.super_admin_email)
+
+        await asyncio.to_thread(_promote_super_admin)
 
     # 同步调度（REQ-20261012-02）：孤儿行清理先行（m9），再启动循环任务
     app.state.sync_task = None

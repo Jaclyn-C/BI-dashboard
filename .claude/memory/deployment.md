@@ -1,6 +1,6 @@
 # 部署知识（deployment）
 
-> 目标：公网服务器部署，供应商经公网调用下游 API。首次实际部署后由负责 Agent 补充实测细节。
+> 目标：公网服务器部署，供应商经公网调用下游 API。已上线（2026-10-17），实测细节见文末「首次上线实测」。
 
 ## 代码远端
 
@@ -36,3 +36,14 @@
 - **备份**：`deploy/backup.sh`（pg_dump gzip 到 backups/，留 14 份），手册 §5 有 crontab 配法
 - 坑：pnpm 12 在干净环境会拦 esbuild 安装脚本，镜像内用 `pnpm install --frozen-lockfile --allow-build=esbuild`；Dockerfile 基础镜像保持官方源（香港服务器直连无碍），国内本机构建可用镜像源拉取后 retag
 - 方案 B（按量随用随开，阿里云节省停机模式）见 `docs/deployment/按量开关部署手册.md` + `deploy/teardown.sh`（月末备份下载后释放实例）；复用本方案全部命令，`DOMAIN` 可填 `http://<EIP>` 走明文 80（已实测）
+
+## 首次上线实测（2026-10-17，杭州 ecs.e-c1m1.large + EIP）
+
+- **线上地址**：`http://114.55.107.28`（纯 IP 明文 HTTP，Caddy 以 :80 监听，验证过 healthz/SPA/OpenAPI/静态资源全通）；crontab 04:10 每日备份已配，`backups/pd-2026-10-17.sql.gz` 验证可产出
+- **上线即回填**：启动后调度器自动拉上游订单，几分钟内入库 2.4 万行——上游凭据/调度器生产可用
+- **国内节点四个坑（setup-server.sh 已内置前三项的兜底）**：
+  1. Docker Hub 直连超时 → 从 `docker.m.daocloud.io/library/<img>` 拉取后 retag（daocloud 偶发卡死，重启拉取即恢复；终极兜底：本机拉好 `docker save | gzip | ssh 'gunzip | docker load'`）
+  2. Apple Silicon 本机拉镜像默认 arm64，传到 x86 服务器 `exec format error`——本机操作必须 `--platform linux/amd64`
+  3. `PIP_INDEX_URL` 加在本机 deploy.sh 上无效（compose 在服务器执行，env 过不了 ssh）——须在服务器侧设，或用脚本内置的探测回退；清华源对该机 403，阿里云 PyPI（mirrors.aliyun.com/pypi/simple）最快
+  4. Caddy 站点按 Host 匹配：`DOMAIN=http://<EIP>` 时本机 curl 127.0.0.1 不命中站点——探测须带 `-H "Host: <EIP>"`
+- `.env.prod.example` 的 DOMAIN 模板值必须留空——占位域名会绕过首跑必填检查（已修）

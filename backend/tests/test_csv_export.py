@@ -29,7 +29,7 @@ def auth(db_session):
     from app.models import User
     from app.services import token_service
 
-    user = User(email="csv@example.com", nickname="csv", password_hash="x")
+    user = User(email="csv@example.com", nickname="csv", password_hash="x", role="admin")
     db_session.add(user)
     db_session.commit()
     token, _ = token_service.create_access_token(user.id, user.credential_version)

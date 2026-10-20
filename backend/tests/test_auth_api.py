@@ -45,7 +45,7 @@ def test_register_happy_path_auto_login(client, fake_sender):
     assert set(body) == {"access_token", "token_type", "expires_in", "user"}
     assert body["token_type"] == "Bearer"
     assert body["expires_in"] == 28800  # 8h（Q6）
-    assert set(body["user"]) == {"id", "email", "nickname", "created_at"}
+    assert set(body["user"]) == {"id", "email", "nickname", "role", "created_at"}
     assert body["user"]["email"] == email
 
     # 自动登录成立：token 直接可用

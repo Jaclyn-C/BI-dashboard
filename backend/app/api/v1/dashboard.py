@@ -11,6 +11,8 @@
 - GET  /dashboard/customer-orders.csv 客户视图当前页 CSV（REQ-20261015-02）
 - POST /dashboard/sync         手动刷新（202 + 进度轮询，§5.5）
 - GET  /dashboard/sync/status
+
+权限（REQ-20261020-01）：内部接口 admin+；customer-orders 三正式角色。
 """
 
 import asyncio
@@ -22,8 +24,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, require_role
 from app.api.errors import ApiError
+from app.models.user import ROLE_ADMIN, ROLE_CUSTOMER, ROLE_SUPER_ADMIN
 from app.schemas.dashboard import (
     MAX_RANGE_DAYS,
     TABLE_PAGE_SIZE,
@@ -73,6 +76,7 @@ RangeTo = Annotated[date, Query(alias="to", description="区间终点 YYYY-MM-DD
 @router.get(
     "/summary",
     response_model=SummaryResponse,
+    dependencies=[Depends(require_role(ROLE_ADMIN, ROLE_SUPER_ADMIN))],
     summary="看板总览（一次装载除订单表外全部区块）",
     description="KPI（REQ-20261014-01 分成口径）/ 每日双口径 / 广告 / 新旧美元对比 / 国家分布，"
     "聚合在后端以 Decimal 完成。class=included/excluded 为数据集切换："
@@ -92,6 +96,7 @@ def summary(
 @router.get(
     "/orders",
     response_model=OrdersResponse,
+    dependencies=[Depends(require_role(ROLE_ADMIN, ROLE_SUPER_ADMIN))],
     summary="订单明细分页表",
     description="筛选（类别/币种/状态）+ 排序（时间/币种/金额/美元）+ 25 行/页分页。"
     "class 筛选仅作用于列表展示（REQ-20261014-01 §六）。",
@@ -154,6 +159,7 @@ def orders(
 @router.get(
     "/customer-orders",
     response_model=CustomerOrdersResponse,
+    dependencies=[Depends(require_role(ROLE_CUSTOMER, ROLE_ADMIN, ROLE_SUPER_ADMIN))],
     summary="客户视图订单表（下游可见数据预览，REQ-20261015-02）",
     description="仅返回已计入（included）订单的纯订单信息——不含 order_class/tag 等"
     "任何内部分类字段（字段裁剪在后端完成）。未来供应商接口以此字段集为契约起点。",
@@ -212,6 +218,7 @@ def customer_orders(
 
 @router.get(
     "/customer-orders.csv",
+    dependencies=[Depends(require_role(ROLE_CUSTOMER, ROLE_ADMIN, ROLE_SUPER_ADMIN))],
     summary="客户视图订单 CSV（当前筛选全量）",
     description="与 /customer-orders 同参同序，导出当前筛选**全部行**（跨页）的 7 列纯订单信息"
     "（included-only，不含任何分类字段）。UTF-8 BOM + CRLF；"
@@ -252,6 +259,7 @@ def customer_orders_csv(
 
 @router.get(
     "/orders.csv",
+    dependencies=[Depends(require_role(ROLE_ADMIN, ROLE_SUPER_ADMIN))],
     summary="订单 CSV 导出（流式）",
     description="scope=view 套用表格筛选+排序全量行；scope=all 区间全量"
     "（create_time desc 固定序）。UTF-8 BOM + CRLF；class 列填已计入/被剔除，"
@@ -298,6 +306,7 @@ def orders_csv(
     "/sync",
     response_model=SyncAcceptedResponse,
     status_code=202,
+    dependencies=[Depends(require_role(ROLE_ADMIN, ROLE_SUPER_ADMIN))],
     summary="手动刷新（触发当前区间同步）",
     description="↻ 按钮：对当前筛选区间触发一次即时同步（全区间重拉，服务端钳制跨度与上界）。"
     "已有同步在跑时 accepted=false（不报错，前端继续轮询进度）。",
@@ -315,6 +324,7 @@ async def trigger_sync(
 @router.get(
     "/sync/status",
     response_model=SyncStatusResponse,
+    dependencies=[Depends(require_role(ROLE_ADMIN, ROLE_SUPER_ADMIN))],
     summary="同步进度与最近一次运行",
     description="state=running 时 current 含「{a}/{b} 天」进度（AC-S1 loadingDays）；"
     "last_run 持久于 sync_runs（重启后仍可查最近结果）。",

@@ -6,7 +6,7 @@
 
 import re
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import (
     AfterValidator,
@@ -115,6 +115,8 @@ class UserPublic(BaseModel):
     id: int
     email: str
     nickname: str
+    #: 角色（REQ-20261020-01）；注册/登录响应与 /me 自动携带
+    role: Literal["super_admin", "admin", "customer", "pending"]
     created_at: datetime
 
 

@@ -11,7 +11,7 @@ from app.services import token_service
 from app.services.email_sender import EmailSender
 from app.services.token_service import TokenError
 
-__all__ = ["get_current_user", "get_db", "get_email_sender"]
+__all__ = ["get_current_user", "get_db", "get_email_sender", "require_role"]
 
 _bearer = HTTPBearer(auto_error=False, description="登录接口返回的 access token（Bearer）")
 
@@ -41,3 +41,18 @@ def get_current_user(
     if user is None or user.credential_version != payload.credential_version:
         raise ApiError(401, "UNAUTHORIZED", "missing or invalid bearer token")
     return user
+
+
+def require_role(*allowed: str):
+    """角色门禁（REQ-20261020-01 §1.5）：先过 get_current_user，再校验角色。
+
+    用法：端点 dependencies=[Depends(require_role(ROLE_ADMIN, ROLE_SUPER_ADMIN))]。
+    pending 用户任何数据接口即 403；401 语义（未登录）不变。
+    """
+
+    def _checker(user: User = Depends(get_current_user)) -> User:
+        if user.role not in allowed:
+            raise ApiError(403, "FORBIDDEN", "insufficient role")
+        return user
+
+    return _checker

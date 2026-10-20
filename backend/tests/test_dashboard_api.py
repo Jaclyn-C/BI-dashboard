@@ -13,8 +13,8 @@ API = "/api/v1/dashboard"
 
 @pytest.fixture
 def auth(db_session):
-    """直插用户 + 签发 token（绕开注册流程，聚焦看板行为）。"""
-    user = User(email="dash@example.com", nickname="dash", password_hash="x")
+    """直插用户 + 签发 token（绕开注册流程，聚焦看板行为）。内部接口需 admin。"""
+    user = User(email="dash@example.com", nickname="dash", password_hash="x", role="admin")
     db_session.add(user)
     db_session.commit()
     token, _ = token_service.create_access_token(user.id, user.credential_version)

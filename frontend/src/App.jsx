@@ -44,10 +44,12 @@ function RequireRole({ allow, children }) {
   return children
 }
 
-/** /pending 专属：非 pending 角色跳自己主页 */
+/** /pending 专属：非 pending 角色跳自己主页。role 未知（如后端旧版本）按 pending 渲染，防重定向死循环 */
 function PendingOnly({ children }) {
   const { user } = useAuth()
-  if (user && user.role !== 'pending') return <Navigate to={homePathFor(user.role)} replace />
+  if (user && user.role && user.role !== 'pending') {
+    return <Navigate to={homePathFor(user.role)} replace />
+  }
   return children
 }
 

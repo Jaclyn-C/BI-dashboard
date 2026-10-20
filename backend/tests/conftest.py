@@ -13,6 +13,9 @@ import os
 
 # 必须先于 app 导入：环境变量优先级高于 .env（pydantic-settings），见上
 os.environ["SYNC_ENABLED"] = "false"
+# 屏蔽超管提权（REQ-20261020-01）：本地 .env 若配了 SUPER_ADMIN_EMAIL，
+# 测试 lifespan 会经 SessionLocal 对 dev 库产生提权副作用（同 SYNC_ENABLED 思路）
+os.environ["SUPER_ADMIN_EMAIL"] = ""
 # 测试专用打标盐值（REQ-20261014-01）：与本地 .env 解耦，黄金向量可复算
 os.environ.setdefault("ORDER_FILTER_SALT", "unit-test-salt")
 

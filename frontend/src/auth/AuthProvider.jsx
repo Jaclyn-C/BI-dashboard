@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import * as authApi from '../api/auth'
-import { clearToken, getToken, setToken } from '../api/client'
+import { clearToken, getToken, setOnForbidden, setToken } from '../api/client'
 import AuthContext from './AuthContext'
 
 export function AuthProvider({ children }) {
@@ -59,6 +59,20 @@ export function AuthProvider({ children }) {
     clearToken()
     setUser(null)
   }, [])
+
+  /** 权限被调整（403）时重拉 /me；守卫按新 role 自动分流（REQ-20261020-01） */
+  const refreshUser = useCallback(async () => {
+    try {
+      setUser(await authApi.me())
+    } catch (err) {
+      /* 401 已由 client 统一处理 */
+    }
+  }, [])
+
+  useEffect(() => {
+    setOnForbidden(refreshUser)
+    return () => setOnForbidden(null)
+  }, [refreshUser])
 
   const value = useMemo(
     () => ({ user, booting, login, registerAndLogin, logout }),

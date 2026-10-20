@@ -3,6 +3,7 @@
 // DESIGN §5.5：baseURL '/api/v1'；token 注入（sessionStorage 'pd_token'）；
 // 错误信封 → ApiError{code,message,status,details,retryAfter}；
 // 网络 → ApiError{code:'NETWORK'}；带 token 的请求收到 401 → 清 token 跳 /login?expired=1。
+// 403（带 token）→ onForbidden 回调（角色变更后重拉 /me）。
 // ============================================================
 
 const BASE_URL = '/api/v1'
@@ -41,6 +42,14 @@ export function clearToken() {
   } catch (e) {
     /* ignore */
   }
+}
+
+// 403 处理（REQ-20261020-01）：带 token 的请求被拒权限时通知会话层重拉 /me
+// （角色可能已被管理员调整，路由守卫按新角色接管跳转）。/me 自身不会返回 403，无递归。
+let onForbidden = null
+
+export function setOnForbidden(fn) {
+  onForbidden = typeof fn === 'function' ? fn : null
 }
 
 function redirectToExpiredLogin() {
@@ -89,6 +98,7 @@ export async function request(path, { method = 'GET', body = null, auth = true }
       /* 非 JSON 响应体 */
     }
     const envelope = payload && payload.error ? payload.error : {}
+    if (res.status === 403 && withAuth && onForbidden) onForbidden()
     throw new ApiError({
       code: envelope.code || 'HTTP_ERROR',
       message: envelope.message || `HTTP ${res.status}`,
@@ -134,6 +144,7 @@ export async function requestDownload(path, { filename }) {
       /* 非 JSON 响应体 */
     }
     const envelope = payload && payload.error ? payload.error : {}
+    if (res.status === 403 && token && onForbidden) onForbidden()
     throw new ApiError({
       code: envelope.code || 'HTTP_ERROR',
       message: envelope.message || `HTTP ${res.status}`,

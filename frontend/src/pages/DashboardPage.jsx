@@ -45,7 +45,7 @@ export default function DashboardPage() {
   const [range, setRange] = useState(() => presetRange('7d')) // AC-T2：默认近 7 天
   const [dataset, setDataset] = useState('all') // REQ-20261014-01：数据集全局切换
   const [dailyView, setDailyView] = useState('chart') // AC-E1：双卡共享
-  const [filters, setFilters] = useState({ klass: 'all', currency: 'all', status: 'all' })
+  const [filters, setFilters] = useState({ klass: 'all', currency: 'all', status: 'all', upstream: 'all' })
   const [sort, setSort] = useState({ key: 'date', dir: 'desc' }) // AC-O3 默认
   const [page, setPage] = useState(1)
   const [csvBusy, setCsvBusy] = useState(false)
@@ -68,6 +68,7 @@ export default function DashboardPage() {
     klass: effectiveClass,
     currency: filters.currency,
     status: filters.status,
+    upstream: filters.upstream,
     sortKey: sort.key,
     sortDir: sort.dir,
     page,
@@ -86,7 +87,7 @@ export default function DashboardPage() {
     if (syncStatusMeta === 'running') ensurePolling()
   }, [syncStatusMeta, ensurePolling])
 
-  // 币种筛选失效回落 all（AC-O2；选项由当前区间订单动态生成）
+  // 币种/上游筛选失效回落 all（AC-O2；选项由当前区间订单动态生成）
   const orderCurrencies = orders.data ? orders.data.currencies : null
   useEffect(() => {
     if (!orderCurrencies) return
@@ -95,6 +96,14 @@ export default function DashboardPage() {
       setPage(1)
     }
   }, [orderCurrencies, filters.currency])
+  const orderUpstreams = orders.data ? orders.data.upstreams : null
+  useEffect(() => {
+    if (!orderUpstreams) return
+    if (filters.upstream !== 'all' && !orderUpstreams.includes(filters.upstream)) {
+      setFilters((f) => ({ ...f, upstream: 'all' }))
+      setPage(1)
+    }
+  }, [orderUpstreams, filters.upstream])
 
   // ---- 交互（筛选/排序/区间/数据集变化一律重置页码，AC-T5/O2/O3）----
   const handlePreset = useCallback((preset) => {

@@ -34,14 +34,14 @@ export function getSummary({ from, to, klass = 'all' }) {
 }
 
 /** (2) GET /dashboard/orders?from&to&class&currency&status&sort&dir&page — 订单分页表，DESIGN §5.3 */
-export function getOrders({ from, to, klass = 'all', currency = 'all', status = 'all', sort = 'date', dir = 'desc', page = 1 }) {
-  if (MOCK) return callMock('getOrdersMock', { from, to, klass, currency, status, sort, dir, page }, 150)
-  return request(`/dashboard/orders?${qs({ from, to, class: klass, currency, status, sort, dir, page })}`)
+export function getOrders({ from, to, klass = 'all', currency = 'all', status = 'all', upstream = 'all', sort = 'date', dir = 'desc', page = 1 }) {
+  if (MOCK) return callMock('getOrdersMock', { from, to, klass, currency, status, upstream, sort, dir, page }, 150)
+  return request(`/dashboard/orders?${qs({ from, to, class: klass, currency, status, upstream, sort, dir, page })}`)
 }
 
 /** (2b) GET /dashboard/customer-orders?from&to&currency&status&sort&dir&page — 客户视图订单表（REQ-20261015-02：included-only、无分类字段） */
-export function getCustomerOrders({ from, to, currency = 'all', status = 'all', sort = 'date', dir = 'desc', page = 1 }) {
-  return request(`/dashboard/customer-orders?${qs({ from, to, currency, status, sort, dir, page })}`)
+export function getCustomerOrders({ from, to, currency = 'all', status = 'all', upstream = 'all', sort = 'date', dir = 'desc', page = 1 }) {
+  return request(`/dashboard/customer-orders?${qs({ from, to, currency, status, upstream, sort, dir, page })}`)
 }
 
 /** (3) GET /dashboard/orders.csv?… — CSV 下载（scope=view|all；lang=en|zh），DESIGN §5.4 */

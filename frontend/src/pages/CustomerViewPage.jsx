@@ -29,7 +29,7 @@ export default function CustomerViewPage() {
   usePageTitle('common.pageTitle.customer')
 
   const [range, setRange] = useState(() => presetRange('7d'))
-  const [filters, setFilters] = useState({ currency: 'all', status: 'all' })
+  const [filters, setFilters] = useState({ currency: 'all', status: 'all', upstream: 'all' })
   const [sort, setSort] = useState({ key: 'date', dir: 'desc' })
   const [page, setPage] = useState(1)
   const [csvBusy, setCsvBusy] = useState(false)
@@ -43,12 +43,13 @@ export default function CustomerViewPage() {
     to: range.to,
     currency: filters.currency,
     status: filters.status,
+    upstream: filters.upstream,
     sortKey: sort.key,
     sortDir: sort.dir,
     page,
   })
 
-  // 币种筛选失效回落 all（选项由当前区间动态生成，同看板 AC-O2）
+  // 币种/上游筛选失效回落 all（选项由当前区间动态生成，同看板 AC-O2）
   const orderCurrencies = orders.data ? orders.data.currencies : null
   useEffect(() => {
     if (!orderCurrencies) return
@@ -57,6 +58,14 @@ export default function CustomerViewPage() {
       setPage(1)
     }
   }, [orderCurrencies, filters.currency])
+  const orderUpstreams = orders.data ? orders.data.upstreams : null
+  useEffect(() => {
+    if (!orderUpstreams) return
+    if (filters.upstream !== 'all' && !orderUpstreams.includes(filters.upstream)) {
+      setFilters((f) => ({ ...f, upstream: 'all' }))
+      setPage(1)
+    }
+  }, [orderUpstreams, filters.upstream])
 
   const handlePreset = useCallback((preset) => {
     setRange(presetRange(preset))

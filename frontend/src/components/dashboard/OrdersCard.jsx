@@ -20,7 +20,7 @@ const classLabel = (t, value) => {
 
 /**
  * @param {{data: object|null, fmt: object,
- *          filters: {klass: string, currency: string, status: string},
+ *          filters: {klass: string, currency: string, status: string, upstream: string},
  *          classValue: string, classLocked: boolean,
  *          sort: {key: string, dir: string}, page: number,
  *          onFilterChange: (patch: object) => void,
@@ -28,6 +28,7 @@ const classLabel = (t, value) => {
  *          hideClass?: boolean, title?: string, sub?: string,
  *          actions?: React.ReactNode}} props
  * hideClass=true → 客户视图变体（REQ-20261015-02）：无类别列、无类别筛选；
+ * 上游列与上游筛选两变体共有（REQ-20261022-02 §1.4，选项来自响应 upstreams）；
  * title/sub 可覆盖默认标题与副标题；actions 渲染在卡片头部右侧筛选器前
  * （客户视图"当前视图（CSV）"下载按钮用）。
  */
@@ -154,6 +155,22 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
               </select>
             </>
           )}
+          <label className="visually-hidden" htmlFor="upstreamFilter">
+            {t('dashboard.hUpstream')}
+          </label>
+          <select
+            className="field"
+            id="upstreamFilter"
+            value={filters.upstream}
+            onChange={(e) => onFilterChange({ upstream: e.target.value })}
+          >
+            <option value="all">{t('dashboard.fAllUpstreams')}</option>
+            {(data ? data.upstreams : []).map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
           <label className="visually-hidden" htmlFor="currencyFilter">
             {t('dashboard.hCurrency')}
           </label>

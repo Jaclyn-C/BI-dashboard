@@ -8,12 +8,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { getOrders } from '../api/dashboard'
 
-export default function useOrders({ from, to, klass, currency, status, sortKey, sortDir, page }) {
+export default function useOrders({ from, to, klass, currency, status, upstream, sortKey, sortDir, page }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [reloadSeq, setReloadSeq] = useState(0)
-  const key = [from, to, klass, currency, status, sortKey, sortDir, page].join('|')
+  const key = [from, to, klass, currency, status, upstream, sortKey, sortDir, page].join('|')
   const keyRef = useRef(key)
   keyRef.current = key
 
@@ -21,7 +21,7 @@ export default function useOrders({ from, to, klass, currency, status, sortKey, 
     let cancelled = false
     setLoading(true)
     setError(null)
-    getOrders({ from, to, klass, currency, status, sort: sortKey, dir: sortDir, page })
+    getOrders({ from, to, klass, currency, status, upstream, sort: sortKey, dir: sortDir, page })
       .then((payload) => {
         if (!cancelled) setData(payload)
       })

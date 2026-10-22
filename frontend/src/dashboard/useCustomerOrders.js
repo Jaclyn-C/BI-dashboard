@@ -7,12 +7,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { getCustomerOrders } from '../api/dashboard'
 
-export default function useCustomerOrders({ from, to, currency, status, sortKey, sortDir, page }) {
+export default function useCustomerOrders({ from, to, currency, status, upstream, sortKey, sortDir, page }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
   const [reloadSeq, setReloadSeq] = useState(0)
-  const key = [from, to, currency, status, sortKey, sortDir, page].join('|')
+  const key = [from, to, currency, status, upstream, sortKey, sortDir, page].join('|')
   const keyRef = useRef(key)
   keyRef.current = key
 
@@ -20,7 +20,7 @@ export default function useCustomerOrders({ from, to, currency, status, sortKey,
     let cancelled = false
     setLoading(true)
     setError(null)
-    getCustomerOrders({ from, to, currency, status, sort: sortKey, dir: sortDir, page })
+    getCustomerOrders({ from, to, currency, status, upstream, sort: sortKey, dir: sortDir, page })
       .then((payload) => {
         if (!cancelled) setData(payload)
       })

@@ -6,12 +6,12 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 
 import useAuth from '../auth/useAuth'
 import usePageTitle from '../utils/usePageTitle'
 import { listUsers, updateUserRole } from '../api/users'
 import AppBar from '../components/dashboard/AppBar'
+import Sidebar from '../components/Sidebar'
 
 // 与后端 role_service 同源的展示用规则（REQ §1.3）
 const LEVEL = { super_admin: 3, admin: 2, customer: 1, pending: 0 }
@@ -31,7 +31,6 @@ const ACTION_KEY = {
 export default function UsersPage() {
   const { t, i18n } = useTranslation()
   const { user: me, logout } = useAuth()
-  const navigate = useNavigate()
   usePageTitle('common.pageTitle.users')
 
   const [users, setUsers] = useState(null)
@@ -92,73 +91,74 @@ export default function UsersPage() {
       : t('users.never')
 
   return (
-    <div className="wrap">
-      <AppBar
-        sub={t('users.title')}
-        navs={[
-          { label: t('customer.navBack'), onClick: () => navigate('/') },
-          { label: t('customer.navTo'), onClick: () => navigate('/customer') },
-        ]}
-        onLogout={logout}
-      />
-      <div className="card">
-        {loadError ? (
-          <div className="banner error" role="alert">
-            <div className="body">{t('users.loadFailed')}</div>
+    <div className="shell">
+      <Sidebar />
+      <div className="shell-main">
+        <div className="wrap">
+          <AppBar
+            sub={t('users.title')}
+            onLogout={logout}
+          />
+          <div className="card">
+            {loadError ? (
+              <div className="banner error" role="alert">
+                <div className="body">{t('users.loadFailed')}</div>
+              </div>
+            ) : null}
+            {actionError ? (
+              <div className="banner error" role="alert">
+                <div className="body">{t('users.actionFailed')}</div>
+              </div>
+            ) : null}
+            {users === null && !loadError ? (
+              <div className="statusline">
+                <span className="dot" />
+                <span>{t('users.loading')}</span>
+              </div>
+            ) : null}
+            {users !== null && users.length === 0 ? (
+              <p className="loginsub">{t('users.loadFailed')}</p>
+            ) : null}
+            {users !== null && users.length > 0 ? (
+              <table className="users-table">
+                <thead>
+                  <tr>
+                    <th>{t('users.colEmail')}</th>
+                    <th>{t('users.colNickname')}</th>
+                    <th>{t('users.colRole')}</th>
+                    <th>{t('users.colCreatedAt')}</th>
+                    <th>{t('users.colLastLogin')}</th>
+                    <th aria-label={t('users.colRole')} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.email}</td>
+                      <td>{row.nickname}</td>
+                      <td>{t(ROLE_KEY[row.role] || 'users.rolePending')}</td>
+                      <td>{fmtDateTime(row.created_at)}</td>
+                      <td>{fmtDateTime(row.last_login_at)}</td>
+                      <td className="users-actions">
+                        {actionsFor(row).map((role) => (
+                          <button
+                            key={role}
+                            type="button"
+                            className="chip"
+                            disabled={busyId === row.id}
+                            onClick={() => handleSetRole(row, role)}
+                          >
+                            {t(ACTION_KEY[role])}
+                          </button>
+                        ))}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
           </div>
-        ) : null}
-        {actionError ? (
-          <div className="banner error" role="alert">
-            <div className="body">{t('users.actionFailed')}</div>
-          </div>
-        ) : null}
-        {users === null && !loadError ? (
-          <div className="statusline">
-            <span className="dot" />
-            <span>{t('users.loading')}</span>
-          </div>
-        ) : null}
-        {users !== null && users.length === 0 ? (
-          <p className="loginsub">{t('users.loadFailed')}</p>
-        ) : null}
-        {users !== null && users.length > 0 ? (
-          <table className="users-table">
-            <thead>
-              <tr>
-                <th>{t('users.colEmail')}</th>
-                <th>{t('users.colNickname')}</th>
-                <th>{t('users.colRole')}</th>
-                <th>{t('users.colCreatedAt')}</th>
-                <th>{t('users.colLastLogin')}</th>
-                <th aria-label={t('users.colRole')} />
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.email}</td>
-                  <td>{row.nickname}</td>
-                  <td>{t(ROLE_KEY[row.role] || 'users.rolePending')}</td>
-                  <td>{fmtDateTime(row.created_at)}</td>
-                  <td>{fmtDateTime(row.last_login_at)}</td>
-                  <td className="users-actions">
-                    {actionsFor(row).map((role) => (
-                      <button
-                        key={role}
-                        type="button"
-                        className="chip"
-                        disabled={busyId === row.id}
-                        onClick={() => handleSetRole(row, role)}
-                      >
-                        {t(ACTION_KEY[role])}
-                      </button>
-                    ))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : null}
+        </div>
       </div>
     </div>
   )

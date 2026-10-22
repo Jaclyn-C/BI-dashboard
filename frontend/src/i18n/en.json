@@ -220,9 +220,13 @@
     "syncRejected": "A sync is already running — showing its progress.",
     "hCreateTime": "Time (UTC)"
   },
+  "nav": {
+    "label": "Main navigation",
+    "dashboard": "Data dashboard",
+    "customer": "Customer view",
+    "users": "Users"
+  },
   "customer": {
-    "navTo": "Customer view",
-    "navBack": "Back to dashboard",
     "subBar": "Orders visible to downstream customers · exactly what the supplier API returns",
     "title": "Customer-visible orders",
     "ordersSub": "{{m}} total · showing {{n}}",
@@ -234,7 +238,6 @@
   },
   "users": {
     "title": "User Management",
-    "navTo": "Users",
     "loading": "Loading…",
     "colEmail": "Email",
     "colNickname": "Nickname",

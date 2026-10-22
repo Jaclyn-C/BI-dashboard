@@ -220,9 +220,13 @@
     "syncRejected": "已有同步正在进行，正在展示其进度。",
     "hCreateTime": "时间（UTC）"
   },
+  "nav": {
+    "label": "主导航",
+    "dashboard": "数据看板",
+    "customer": "客户视图",
+    "users": "用户管理"
+  },
   "customer": {
-    "navTo": "客户视图",
-    "navBack": "返回看板",
     "subBar": "下游客户可见订单 · 即供应商接口返回的全部数据",
     "title": "客户可见订单",
     "ordersSub": "共 {{m}} 笔 · 当前显示 {{n}} 笔",
@@ -234,7 +238,6 @@
   },
   "users": {
     "title": "用户管理",
-    "navTo": "用户管理",
     "loading": "加载中…",
     "colEmail": "邮箱",
     "colNickname": "昵称",

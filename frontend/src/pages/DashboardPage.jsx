@@ -21,6 +21,7 @@ import useOrders from '../dashboard/useOrders'
 import useSyncStatus from '../dashboard/useSyncStatus'
 import { downloadOrdersCsv } from '../api/dashboard'
 import AppBar, { StatusLine } from '../components/dashboard/AppBar'
+import Sidebar from '../components/Sidebar'
 import TimeFilters from '../components/dashboard/TimeFilters'
 import DatasetBar from '../components/dashboard/DatasetBar'
 import Banners from '../components/dashboard/Banners'
@@ -210,89 +211,90 @@ export default function DashboardPage() {
 
   return (
     <TooltipProvider>
-      <div className="wrap">
-        <AppBar
-          sub={t(dataset === 'included' ? 'dashboard.subIncluded' : dataset === 'excluded' ? 'dashboard.subExcluded' : 'dashboard.subAll')}
-          status={statusNode}
-          navs={[
-            { label: t('customer.navTo'), onClick: () => navigate('/customer') },
-            { label: t('users.navTo'), onClick: () => navigate('/users') },
-          ]}
-          onGuide={() => setGuideOpen(true)}
-          onRefresh={handleRefresh}
-          onLogout={handleLogout}
-        />
-        <TimeFilters range={range} today={todayKey()} onPreset={handlePreset} onCustom={handleCustom} />
-        <DatasetBar
-          dataset={dataset}
-          onDatasetChange={handleDataset}
-          onCsvView={() => handleCsv('view')}
-          onCsvAll={() => handleCsv('all')}
-          csvBusy={csvBusy}
-        />
-        <Banners
-          error={summary.error || csvError}
-          syncFailed={syncFailed}
-          adError={meta && meta.ad_available === false ? meta.ad_error || '' : null}
-          truncatedDays={meta ? meta.truncated_days : []}
-          noUsdCurrencies={data && data.conv ? data.conv.no_usd_currencies : []}
-          onRetryError={() => {
-            setCsvError(null)
-            summary.reload()
-          }}
-          onRetrySync={handleRefresh}
-        />
-        <main className={busyDim ? 'loadingdim' : undefined}>
-          {data ? (
-            <>
-              <KpiSection kpis={data.kpis} fmt={fmt} />
-              <div className="stack">
-                <DailyCard
-                  variant="est"
-                  days={data.daily.days}
-                  entries={data.daily.est}
-                  adByDate={adByDate}
-                  currencyRank={data.daily.currency_rank}
-                  totalDisplay={money(fmt, data.conv.legacy_total)} /* aria 合计=后端 conv 合计（AC-V4） */
-                  view={dailyView}
-                  yMax={dailyYMax}
-                  onViewChange={setDailyView}
-                  showToggle
-                  fmt={fmt}
-                />
-                <DailyCard
-                  variant="usd"
-                  days={data.daily.days}
-                  entries={data.daily.usd}
-                  adByDate={adByDate}
-                  currencyRank={data.daily.currency_rank}
-                  totalDisplay={money(fmt, data.conv.server_total)}
-                  view={dailyView}
-                  yMax={dailyYMax}
-                  onViewChange={setDailyView}
-                  showToggle={false}
-                  fmt={fmt}
-                />
-                <AdCard ad={data.daily.ad} fmt={fmt} />
-                <ConvCard conv={data.conv} fmt={fmt} />
-                <CountryCard countries={data.countries} fmt={fmt} />
-                <OrdersCard
-                  data={orders.data}
-                  fmt={fmt}
-                  filters={filters}
-                  classValue={dataset === 'all' ? filters.klass : dataset}
-                  classLocked={dataset !== 'all'}
-                  sort={sort}
-                  page={page}
-                  onFilterChange={handleFilterChange}
-                  onSort={handleSort}
-                  onPageChange={setPage}
-                />
-              </div>
-            </>
-          ) : null}
-        </main>
-        <GuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
+      <div className="shell">
+        <Sidebar />
+        <div className="shell-main">
+          <div className="wrap">
+            <AppBar
+              sub={t(dataset === 'included' ? 'dashboard.subIncluded' : dataset === 'excluded' ? 'dashboard.subExcluded' : 'dashboard.subAll')}
+              status={statusNode}
+              onGuide={() => setGuideOpen(true)}
+              onRefresh={handleRefresh}
+              onLogout={handleLogout}
+            />
+            <TimeFilters range={range} today={todayKey()} onPreset={handlePreset} onCustom={handleCustom} />
+            <DatasetBar
+              dataset={dataset}
+              onDatasetChange={handleDataset}
+              onCsvView={() => handleCsv('view')}
+              onCsvAll={() => handleCsv('all')}
+              csvBusy={csvBusy}
+            />
+            <Banners
+              error={summary.error || csvError}
+              syncFailed={syncFailed}
+              adError={meta && meta.ad_available === false ? meta.ad_error || '' : null}
+              truncatedDays={meta ? meta.truncated_days : []}
+              noUsdCurrencies={data && data.conv ? data.conv.no_usd_currencies : []}
+              onRetryError={() => {
+                setCsvError(null)
+                summary.reload()
+              }}
+              onRetrySync={handleRefresh}
+            />
+            <main className={busyDim ? 'loadingdim' : undefined}>
+              {data ? (
+                <>
+                  <KpiSection kpis={data.kpis} fmt={fmt} />
+                  <div className="stack">
+                    <DailyCard
+                      variant="est"
+                      days={data.daily.days}
+                      entries={data.daily.est}
+                      adByDate={adByDate}
+                      currencyRank={data.daily.currency_rank}
+                      totalDisplay={money(fmt, data.conv.legacy_total)} /* aria 合计=后端 conv 合计（AC-V4） */
+                      view={dailyView}
+                      yMax={dailyYMax}
+                      onViewChange={setDailyView}
+                      showToggle
+                      fmt={fmt}
+                    />
+                    <DailyCard
+                      variant="usd"
+                      days={data.daily.days}
+                      entries={data.daily.usd}
+                      adByDate={adByDate}
+                      currencyRank={data.daily.currency_rank}
+                      totalDisplay={money(fmt, data.conv.server_total)}
+                      view={dailyView}
+                      yMax={dailyYMax}
+                      onViewChange={setDailyView}
+                      showToggle={false}
+                      fmt={fmt}
+                    />
+                    <AdCard ad={data.daily.ad} fmt={fmt} />
+                    <ConvCard conv={data.conv} fmt={fmt} />
+                    <CountryCard countries={data.countries} fmt={fmt} />
+                    <OrdersCard
+                      data={orders.data}
+                      fmt={fmt}
+                      filters={filters}
+                      classValue={dataset === 'all' ? filters.klass : dataset}
+                      classLocked={dataset !== 'all'}
+                      sort={sort}
+                      page={page}
+                      onFilterChange={handleFilterChange}
+                      onSort={handleSort}
+                      onPageChange={setPage}
+                    />
+                  </div>
+                </>
+              ) : null}
+            </main>
+            <GuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
+          </div>
+        </div>
       </div>
     </TooltipProvider>
   )

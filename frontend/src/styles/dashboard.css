@@ -16,6 +16,83 @@
   padding: 16px 24px 48px;
 }
 
+/* ---------- 侧边栏外壳（REQ-20261022-01） ---------- */
+.shell {
+  display: flex;
+  min-height: 100dvh;
+}
+.shell-main {
+  flex: 1;
+  min-width: 0;
+}
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  width: 176px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 12px;
+  border-right: 1px solid var(--border);
+}
+.sideitem {
+  position: relative;
+  text-decoration: none;
+  color: var(--ink2);
+  font-size: 13.5px;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+.sideitem:hover {
+  color: var(--ink);
+  background: var(--series-softer);
+}
+.sideitem.active {
+  color: var(--ink);
+  font-weight: 500;
+}
+.sideitem.active::before {
+  content: '';
+  position: absolute;
+  right: -12px; /* 贴侧边栏右缘（= sidebar padding-right） */
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--series);
+}
+/* 窄屏：侧边栏收纳为横向导航行（沿 900px 断点与 AC-R1） */
+@media (max-width: 900px) {
+  .shell {
+    flex-direction: column;
+  }
+  .sidebar {
+    position: static;
+    height: auto;
+    width: auto;
+    flex-direction: row;
+    flex-wrap: wrap; /* 375px 换行，避免遮挡 */
+    gap: 2px 8px;
+    padding: 10px 16px 8px;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .sideitem {
+    padding: 6px 8px;
+  }
+  .sideitem.active::before {
+    /* 横排模式：左侧标记线转文字下划线 */
+    left: 8px;
+    right: 8px;
+    top: auto;
+    bottom: 1px;
+    width: auto;
+    height: 2px;
+  }
+}
+
 /* ---------- app bar ---------- */
 .appbar {
   display: flex;

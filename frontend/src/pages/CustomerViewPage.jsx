@@ -17,13 +17,14 @@ import { customRange, presetRange, todayKey } from '../dashboard/range'
 import { buildFormatters, intNum } from '../dashboard/format'
 import useCustomerOrders from '../dashboard/useCustomerOrders'
 import AppBar from '../components/dashboard/AppBar'
+import Sidebar from '../components/Sidebar'
 import TimeFilters from '../components/dashboard/TimeFilters'
 import Banners from '../components/dashboard/Banners'
 import OrdersCard from '../components/dashboard/OrdersCard'
 
 export default function CustomerViewPage() {
   const { t, i18n } = useTranslation()
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
   const navigate = useNavigate()
   usePageTitle('common.pageTitle.customer')
 
@@ -107,55 +108,55 @@ export default function CustomerViewPage() {
   const totalInRange = orders.data ? orders.data.total_in_range : 0
 
   return (
-    <div className="wrap">
-      <AppBar
-        sub={t('customer.subBar')}
-        navs={
-          user && (user.role === 'admin' || user.role === 'super_admin')
-            ? [{ label: t('customer.navBack'), onClick: () => navigate('/') }]
-            : []
-        }
-        onRefresh={orders.reload}
-        onLogout={handleLogout}
-      />
-      <TimeFilters range={range} today={todayKey()} onPreset={handlePreset} onCustom={handleCustom} />
-      <Banners
-        error={orders.error || csvError}
-        onRetryError={() => {
-          setCsvError(null) // 同主看板：重试先清下载错误，避免横幅残留
-          orders.reload()
-        }}
-      />
-      <main className={orders.loading ? 'loadingdim' : undefined}>
-        <div className="custnote">{t('customer.note')}</div>
-        <div className="stack">
-          <OrdersCard
-            data={orders.data}
-            fmt={fmt}
-            filters={filters}
-            classValue="all"
-            classLocked
-            hideClass
-            title={t('customer.title')}
-            sub={t('customer.ordersSub', { n: intNum(fmt, total), m: intNum(fmt, totalInRange) })}
-            actions={
-              <button
-                type="button"
-                className="btn-tonal"
-                onClick={handleCsv}
-                disabled={csvBusy || !total}
-              >
-                {'⤓'} <span>{t('dashboard.csvView')}</span>
-              </button>
-            }
-            sort={sort}
-            page={page}
-            onFilterChange={handleFilterChange}
-            onSort={handleSort}
-            onPageChange={setPage}
+    <div className="shell">
+      <Sidebar />
+      <div className="shell-main">
+        <div className="wrap">
+          <AppBar
+            sub={t('customer.subBar')}
+            onRefresh={orders.reload}
+            onLogout={handleLogout}
           />
+          <TimeFilters range={range} today={todayKey()} onPreset={handlePreset} onCustom={handleCustom} />
+          <Banners
+            error={orders.error || csvError}
+            onRetryError={() => {
+              setCsvError(null) // 同主看板：重试先清下载错误，避免横幅残留
+              orders.reload()
+            }}
+          />
+          <main className={orders.loading ? 'loadingdim' : undefined}>
+            <div className="custnote">{t('customer.note')}</div>
+            <div className="stack">
+              <OrdersCard
+                data={orders.data}
+                fmt={fmt}
+                filters={filters}
+                classValue="all"
+                classLocked
+                hideClass
+                title={t('customer.title')}
+                sub={t('customer.ordersSub', { n: intNum(fmt, total), m: intNum(fmt, totalInRange) })}
+                actions={
+                  <button
+                    type="button"
+                    className="btn-tonal"
+                    onClick={handleCsv}
+                    disabled={csvBusy || !total}
+                  >
+                    {'⤓'} <span>{t('dashboard.csvView')}</span>
+                  </button>
+                }
+                sort={sort}
+                page={page}
+                onFilterChange={handleFilterChange}
+                onSort={handleSort}
+                onPageChange={setPage}
+              />
+            </div>
+          </main>
         </div>
-      </main>
+      </div>
     </div>
   )
 }

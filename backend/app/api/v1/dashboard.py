@@ -107,15 +107,21 @@ def orders(
     currency: str = Query(default="all", description="币种筛选：all 或币种码"),
     status: StatusFilter = Query(default="all"),
     order_class: ClassFilter = Query(default="all", alias="class"),
+    upstream: str = Query(default="all", description="上游筛选：all 或上游 code"),
     sort: SortKey = Query(default="date"),
     direction: SortDir = Query(default="desc", alias="dir"),
     page: int = Query(default=1, ge=1),
     db: Session = Depends(get_db),
 ) -> OrdersResponse:
-    """GET /dashboard/orders（§5.3 契约）。"""
+    """GET /dashboard/orders（§5.3 契约）。upstream 筛选 REQ-20261022-02 §1.4。"""
     date_from, date_to = parse_range(date_from, date_to)
     base = orders_query.orders_query(
-        date_from, date_to, currency=currency, status=status, order_class=order_class
+        date_from,
+        date_to,
+        currency=currency,
+        status=status,
+        order_class=order_class,
+        upstream=upstream,
     )
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
     base_all = orders_query.orders_query(date_from, date_to)
@@ -154,6 +160,7 @@ def orders(
         total=total,
         total_in_range=total_in_range,
         currencies=orders_query.range_currencies(db, date_from, date_to),
+        upstreams=orders_query.range_upstreams(db, date_from, date_to),
     )
 
 
@@ -170,6 +177,7 @@ def customer_orders(
     date_to: RangeTo,
     currency: str = Query(default="all", description="币种筛选：all 或币种码"),
     status: StatusFilter = Query(default="all"),
+    upstream: str = Query(default="all", description="上游筛选：all 或上游 code"),
     sort: SortKey = Query(default="date"),
     direction: SortDir = Query(default="desc", alias="dir"),
     page: int = Query(default=1, ge=1),
@@ -178,7 +186,12 @@ def customer_orders(
     """GET /dashboard/customer-orders：included-only + 内部字段后端裁剪。"""
     date_from, date_to = parse_range(date_from, date_to)
     base = orders_query.orders_query(
-        date_from, date_to, currency=currency, status=status, order_class="included"
+        date_from,
+        date_to,
+        currency=currency,
+        status=status,
+        order_class="included",
+        upstream=upstream,
     )
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
     base_all = orders_query.orders_query(date_from, date_to, order_class="included")
@@ -215,6 +228,7 @@ def customer_orders(
         total=total,
         total_in_range=total_in_range,
         currencies=orders_query.range_currencies(db, date_from, date_to),
+        upstreams=orders_query.range_upstreams(db, date_from, date_to),
     )
 
 

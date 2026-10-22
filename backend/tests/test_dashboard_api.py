@@ -34,10 +34,12 @@ def add_order(
     theater_id: str = "TH",
     promotion_code: str | None = None,
     order_class: str | None = None,
+    upstream: str = "netshort",
 ) -> None:
     db.add(
         Order(
             order_id=order_id,
+            upstream_code=upstream,
             create_time=stamp,
             create_date=date.fromisoformat(stamp[:10]),
             theater_id=theater_id,
@@ -161,7 +163,8 @@ def test_orders_default_sort_and_shape(client, auth, db_session):
     seed_orders(db_session)
     body = client.get(f"{API}/orders", params=RANGE, headers=auth).json()
     assert set(body) == {
-        "rows", "page", "page_size", "pages", "total", "total_in_range", "currencies"
+        "rows", "page", "page_size", "pages", "total", "total_in_range",
+        "currencies", "upstreams",
     }
     assert body["page_size"] == 25
     assert body["total"] == body["total_in_range"] == 5
@@ -201,6 +204,27 @@ def test_orders_class_filter(client, auth, db_session):
         f"{API}/orders", params={**RANGE, "class": "excluded"}, headers=auth
     ).json()
     assert [row["order_id"] for row in excluded["rows"]] == ["E", "D", "B"]
+
+
+def test_orders_upstream_filter_and_dynamic_options(client, auth, db_session):
+    """上游筛选（REQ-20261022-02 §1.4）：过滤行集与 total；选项区间动态升序去重。"""
+    seed_orders(db_session)
+    add_order(db_session, "M1", "2026-10-02 12:00:00", "MXN", "100", usd_minor="6",
+              order_class="included", upstream="mock1")
+    body = client.get(f"{API}/orders", params=RANGE, headers=auth).json()
+    assert body["upstreams"] == ["mock1", "netshort"]  # 升序去重
+    assert body["total"] == 6
+    filtered = client.get(
+        f"{API}/orders", params={**RANGE, "upstream": "mock1"}, headers=auth
+    ).json()
+    assert [r["order_id"] for r in filtered["rows"]] == ["M1"]
+    assert filtered["total"] == 1 and filtered["total_in_range"] == 6  # 区间总数不受筛选影响
+    # 客户视图同样支持（included 内过滤）
+    cust = client.get(
+        f"{API}/customer-orders", params={**RANGE, "upstream": "mock1"}, headers=auth
+    ).json()
+    assert [r["order_id"] for r in cust["rows"]] == ["M1"]
+    assert cust["upstreams"] == ["mock1", "netshort"]
 
 
 def test_orders_usd_sort_null_semantics(client, auth, db_session):

@@ -183,6 +183,7 @@ class OrdersResponse(BaseModel):
     total: int
     total_in_range: int
     currencies: list[str]
+    upstreams: list[str]  # 区间动态上游选项（REQ-20261022-02 §1.4）
 
 
 class CustomerOrderRow(BaseModel):
@@ -211,6 +212,7 @@ class CustomerOrdersResponse(BaseModel):
     total: int
     total_in_range: int
     currencies: list[str]
+    upstreams: list[str]  # 区间动态上游选项（REQ-20261022-02 §1.4）
 
 
 class SyncRequest(BaseModel):

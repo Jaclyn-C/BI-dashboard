@@ -29,8 +29,11 @@ def orders_query(
     currency: str = "all",
     status: StatusFilter = "all",
     order_class: ClassFilter = "all",
+    upstream: str = "all",
 ) -> Select:
-    """区间 + 筛选的基础查询（未排序未分页）。class 筛选 REQ-20261014-01 §六。"""
+    """区间 + 筛选的基础查询（未排序未分页）。class 筛选 REQ-20261014-01 §六；
+    upstream 筛选 REQ-20261022-02 §1.4。
+    """
     stmt = select(Order).where(Order.create_date >= date_from, Order.create_date <= date_to)
     if currency and currency != "all":
         stmt = stmt.where(Order.currency_type == currency)
@@ -40,6 +43,8 @@ def orders_query(
         stmt = stmt.where(Order.is_returned.is_(True))
     if order_class != "all":
         stmt = stmt.where(Order.order_class == order_class)
+    if upstream and upstream != "all":
+        stmt = stmt.where(Order.upstream_code == upstream)
     return stmt
 
 
@@ -58,6 +63,17 @@ def range_currencies(db, date_from: date, date_to: date) -> list[str]:
         .where(Order.create_date >= date_from, Order.create_date <= date_to)
         .distinct()
         .order_by(Order.currency_type)
+    ).scalars()
+    return list(rows)
+
+
+def range_upstreams(db, date_from: date, date_to: date) -> list[str]:
+    """区间内动态上游选项（升序去重，REQ-20261022-02 §1.4 筛选框选项）。"""
+    rows = db.execute(
+        select(Order.upstream_code)
+        .where(Order.create_date >= date_from, Order.create_date <= date_to)
+        .distinct()
+        .order_by(Order.upstream_code)
     ).scalars()
     return list(rows)
 

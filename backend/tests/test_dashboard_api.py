@@ -169,6 +169,8 @@ def test_orders_default_sort_and_shape(client, auth, db_session):
     assert body["currencies"] == ["EUR", "KRW", "MXN"]  # 区间动态选项升序（AC-O2）
     # 默认 date desc；createTime 原值直出（AC-S8）；usd 缺失 → null
     assert [row["order_id"] for row in body["rows"]] == ["E", "D", "C", "B", "A"]
+    # 上游列（REQ-20261022-02 §1.4）：存量订单统一 netshort
+    assert all(row["upstream"] == "netshort" for row in body["rows"])
     row_d = body["rows"][1]
     assert row_d["usd"] is None and row_d["amount"] == "8.00"
     assert row_d["country_key"] == "MX"
@@ -292,11 +294,12 @@ def test_customer_orders_included_only_and_no_class_fields(client, auth, db_sess
     # 红线：响应中不存在任何分类字段/键名
     assert "order_class" not in resp.text
     assert "class" not in resp.text.replace("country_key", "")
-    # 行字段集（纯订单信息）
+    # 行字段集（纯订单信息 + 上游归属，REQ-20261022-02 §1.4）
     assert set(body["rows"][0]) == {
-        "order_id", "create_time", "country_key", "language",
+        "order_id", "upstream", "create_time", "country_key", "language",
         "currency", "amount", "usd", "status",
     }
+    assert body["rows"][0]["upstream"] == "netshort"
 
 
 def test_customer_orders_currency_filter_and_paging(client, auth, db_session):

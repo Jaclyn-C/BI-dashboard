@@ -43,6 +43,11 @@ class Order(Base):
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     #: 上游 orderId；UNIQUE uq_orders_order_id = upsert 冲突目标（幂等键）
     order_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    #: 订单归属上游（REQ-20261022-02 §1.4）；同步 upsert 不写此列，恒取默认
+    #: 'netshort'（当前唯一真实上游）。mock 演示订单走独立表，绝不进本表。
+    upstream_code: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="netshort", server_default="netshort"
+    )
     #: 上游原值 `YYYY-MM-DD HH:mm:ss`；字符串字典序 = 时间序（排序直接用它）
     create_time: Mapped[str] = mapped_column(String(32), nullable=False)
     #: 派生日界 = create_time[:10]（区间查询 / 按日聚合走此列）

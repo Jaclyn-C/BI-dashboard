@@ -131,6 +131,7 @@ def orders(
         rows=[
             OrderRow(
                 order_id=row.order_id,
+                upstream=row.upstream_code,
                 create_time=row.create_time,
                 create_date=row.create_date.isoformat(),
                 country_key=aggregation.country_key(row.language),
@@ -193,6 +194,7 @@ def customer_orders(
         rows=[
             CustomerOrderRow(
                 order_id=row.order_id,
+                upstream=row.upstream_code,
                 create_time=row.create_time,
                 country_key=aggregation.country_key(row.language),
                 language=row.language,

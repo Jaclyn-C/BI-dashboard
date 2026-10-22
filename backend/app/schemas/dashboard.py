@@ -163,6 +163,7 @@ class SummaryResponse(BaseModel):
 
 class OrderRow(BaseModel):
     order_id: str
+    upstream: str  # 订单归属上游 code（REQ-20261022-02 §1.4），如 'netshort'
     create_time: str  # 上游原值（表头标注 UTC，AC-S8）
     create_date: str
     country_key: str
@@ -185,9 +186,14 @@ class OrdersResponse(BaseModel):
 
 
 class CustomerOrderRow(BaseModel):
-    """客户视图行（REQ-20261015-02）：纯订单信息，不含 order_class 等任何内部分类字段。"""
+    """客户视图行（REQ-20261015-02）：纯订单信息，不含 order_class 等任何内部分类字段。
+
+    upstream（REQ-20261022-02 §1.4）：订单归属上游 code，属订单自身信息、
+    非内部分类，客户可见（用户定稿）。
+    """
 
     order_id: str
+    upstream: str
     create_time: str
     country_key: str
     language: str | None

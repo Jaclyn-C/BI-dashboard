@@ -219,7 +219,8 @@
     "dataIncompleteNote": "上游同步有延迟，最新一天数据可能不全。",
     "upstreamFailBodySync": " 已显示最近一次成功同步的数据。",
     "syncRejected": "已有同步正在进行，正在展示其进度。",
-    "hCreateTime": "时间（UTC）"
+    "hCreateTime": "时间（UTC）",
+    "hUpstream": "上游"
   },
   "nav": {
     "label": "主导航",

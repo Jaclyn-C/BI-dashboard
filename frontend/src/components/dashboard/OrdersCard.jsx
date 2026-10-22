@@ -77,6 +77,7 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
         <table>
           <thead>
             <tr>
+              <th>{t('dashboard.hUpstream')}</th>
               <th>{t('dashboard.hOrderId')}</th>
               {sortTh(t('dashboard.hCreateTime'), 'date', false)}
               <th>{t('dashboard.hCountry')}</th>
@@ -90,6 +91,7 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
           <tbody>
             {rows.map((o) => (
               <tr key={o.order_id} className={o.order_class === 'excluded' ? 'row-excluded' : undefined}>
+                <td className="muted">{o.upstream}</td>
                 <td className="mono">{o.order_id}</td>
                 <td>{o.create_time}</td>
                 <td>{countryName(o.country_key, fmt, unknownLabel)}</td>

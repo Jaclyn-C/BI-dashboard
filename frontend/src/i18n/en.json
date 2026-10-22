@@ -219,7 +219,8 @@
     "dataIncompleteNote": "Upstream sync lags — the most recent day may be incomplete.",
     "upstreamFailBodySync": " Showing data from the last successful sync.",
     "syncRejected": "A sync is already running — showing its progress.",
-    "hCreateTime": "Time (UTC)"
+    "hCreateTime": "Time (UTC)",
+    "hUpstream": "Upstream"
   },
   "nav": {
     "label": "Main navigation",

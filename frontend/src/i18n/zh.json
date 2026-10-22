@@ -8,6 +8,7 @@
       "forgot": "重置密码 · 合作方数据看板",
       "dashboard": "合作方数据看板",
       "customer": "客户可见订单 · 合作方数据看板",
+      "offers": "Offer 管理",
       "users": "用户管理",
       "pending": "等待分配权限"
     }
@@ -223,7 +224,8 @@
   "nav": {
     "label": "主导航",
     "dashboard": "数据看板",
-    "customer": "客户视图",
+    "customer": "客户订单",
+    "offers": "Offer 管理",
     "users": "用户管理"
   },
   "customer": {
@@ -231,6 +233,17 @@
     "title": "客户可见订单",
     "ordersSub": "共 {{m}} 笔 · 当前显示 {{n}} 笔",
     "note": "本页即下游客户调用我方接口能看到的数据：仅订单本身的信息，不含任何分类或剔除相关字段。"
+  },
+  "offers": {
+    "subBar": "上游合作 offer 一览 · 本系统自有配置数据",
+    "secInUse": "在用",
+    "secAll": "全部可选",
+    "emptyInUse": "暂无在用的 offer",
+    "emptyAll": "暂无可选的 offer",
+    "badgeInUse": "在用",
+    "shareLabel": "供应商分成比例",
+    "loading": "加载中…",
+    "loadFailed": "Offer 列表加载失败，请稍后重试。"
   },
   "pending": {
     "title": "等待分配权限",

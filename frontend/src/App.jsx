@@ -5,6 +5,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import useAuth from './auth/useAuth'
 import DashboardPage from './pages/DashboardPage'
 import CustomerViewPage from './pages/CustomerViewPage'
+import OffersPage from './pages/OffersPage'
 import PendingPage from './pages/PendingPage'
 import UsersPage from './pages/UsersPage'
 import ForgotPage from './pages/auth/ForgotPage'
@@ -96,6 +97,16 @@ export default function App() {
           <RequireAuth>
             <RequireRole allow={['admin', 'super_admin', 'customer']}>
               <CustomerViewPage />
+            </RequireRole>
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/offers"
+        element={
+          <RequireAuth>
+            <RequireRole allow={['admin', 'super_admin']}>
+              <OffersPage />
             </RequireRole>
           </RequireAuth>
         }

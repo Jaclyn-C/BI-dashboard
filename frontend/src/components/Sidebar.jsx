@@ -11,17 +11,20 @@ import { Link, useLocation } from 'react-router-dom'
 
 import useAuth from '../auth/useAuth'
 
-// 条目顺序固定：数据看板 → 客户视图 → 用户管理（REQ §1.1）
+// 条目顺序固定：数据看板 → 客户订单 → Offer 管理 → 用户管理
+// （REQ-20261022-01 §1.1 + REQ-20261022-02 §1.1/§1.3）
 const ITEMS = [
   { key: 'nav.dashboard', to: '/' },
   { key: 'nav.customer', to: '/customer' },
+  { key: 'nav.offers', to: '/offers' },
   { key: 'nav.users', to: '/users' },
 ]
 
 // 与 App.jsx 路由守卫同源的可见性映射；pending 不接外壳（PendingPage 无侧边栏）
+// Offer 管理仅 admin+（分成条款属内部商业数据，REQ-20261022-02）
 const ALLOWED = {
-  super_admin: ['/', '/customer', '/users'],
-  admin: ['/', '/customer', '/users'],
+  super_admin: ['/', '/customer', '/offers', '/users'],
+  admin: ['/', '/customer', '/offers', '/users'],
   customer: ['/customer'],
 }
 

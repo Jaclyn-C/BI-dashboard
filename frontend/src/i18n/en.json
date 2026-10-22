@@ -8,6 +8,7 @@
       "forgot": "Reset password · Partner Dashboard",
       "dashboard": "Partner Dashboard",
       "customer": "Customer-visible orders · Partner Dashboard",
+      "offers": "Offers",
       "users": "User Management",
       "pending": "Waiting for Access"
     }
@@ -223,7 +224,8 @@
   "nav": {
     "label": "Main navigation",
     "dashboard": "Data dashboard",
-    "customer": "Customer view",
+    "customer": "Customer orders",
+    "offers": "Offers",
     "users": "Users"
   },
   "customer": {
@@ -231,6 +233,17 @@
     "title": "Customer-visible orders",
     "ordersSub": "{{m}} total · showing {{n}}",
     "note": "This page shows exactly what downstream customers can see via our API: order information only, with no classification or exclusion fields."
+  },
+  "offers": {
+    "subBar": "Upstream partnership offers · platform-owned configuration",
+    "secInUse": "In use",
+    "secAll": "All available",
+    "emptyInUse": "No offers currently in use",
+    "emptyAll": "No offers available",
+    "badgeInUse": "In use",
+    "shareLabel": "Supplier share of order amount",
+    "loading": "Loading…",
+    "loadFailed": "Failed to load offers. Please try again later."
   },
   "pending": {
     "title": "Waiting for access",

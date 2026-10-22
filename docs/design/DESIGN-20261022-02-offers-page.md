@@ -43,7 +43,15 @@ class Offer(Base):
 - 「客户视图」→「客户订单」：仅改 `nav.customer` 词条（zh 客户订单 / en Customer orders），路由 `/customer` 与页面内容不动。
 - 样式：`.offer-sec`（板块标题）、`.offer-grid`（auto-fill minmax 卡片栅格）、`.offer-card`（surface/border 变量）、`.offer-share`（大号比例数字）、`.offer-badge`（在用标记，文字样式无图标）；≤900px 单列。
 
-## 4. 任务包
+## 4. 订单上游列与 mock 隔离（REQ §1.4，用户追加定稿）
+
+- **迁移 0006**：`orders.upstream_code String(32) NOT NULL server_default 'netshort'`；同步 upsert 不写此列（恒取默认），存量订单自动落 netshort。
+- **接口投影**：`OrderRow`/`CustomerOrderRow` 增 `upstream` 字段（值=upstream_code）；CSV 导出**不加**该列（对账工具 export_diff 依赖现有列序，保持不动）。
+- **前端**：OrdersCard 首列 `<th>上游</th>`（普通展示列，不可排序/筛选），数据看板与客户订单共用组件自动同构。
+- **mock 演示 offer**（mock1 30% / mock2 65%，不在用，描述注明演示）：`tools/seed_mock_offers.py` 幂等 upsert，只写开发库，**不进迁移**。
+- **隔离红线**：mock 上游的演示订单今后独立建表（如 mock_orders），绝不进 orders；已写入 REQ §1.4 与 CLAUDE.md 口径约束等价约束。
+
+## 5. 任务包
 
 **backend-task**
 
@@ -53,6 +61,7 @@ class Offer(Base):
 | B-T2 | 迁移 0005（建表 + netshort 种子） | `alembic/versions/0005_offers.py` |
 | B-T3 | schema + 路由 + 挂载 | `app/schemas/offers.py`、`app/api/v1/offers.py`、`app/api/v1/__init__.py` |
 | B-T4 | 接口测试（角色门禁/形状/排序/空态） | `tests/test_offers_api.py` |
+| B-T5 | 迁移 0006 + Order/OrderRow 上游字段 + 测试 | `alembic/versions/0006_orders_upstream.py`、`app/models/order.py`、`app/schemas/dashboard.py`、`app/api/v1/dashboard.py`、`tests/test_dashboard_api.py` |
 
 **frontend-task**
 
@@ -62,8 +71,15 @@ class Offer(Base):
 | F-T2 | OffersPage | `src/pages/OffersPage.jsx` |
 | F-T3 | 路由 + 侧边栏 + 更名 | `src/App.jsx`、`src/components/Sidebar.jsx` |
 | F-T4 | i18n + 样式 | `src/i18n/{zh,en}.json`、`src/styles/dashboard.css` |
+| F-T5 | OrdersCard 首列上游 | `src/components/dashboard/OrdersCard.jsx` |
 
-## 5. 风险清单
+**tools**
+
+| # | 任务 | 文件 |
+|---|---|---|
+| T-T1 | mock 演示 offer 种子脚本（开发库专用） | `tools/seed_mock_offers.py` |
+
+## 6. 风险清单
 
 | 风险 | 对策 |
 |---|---|

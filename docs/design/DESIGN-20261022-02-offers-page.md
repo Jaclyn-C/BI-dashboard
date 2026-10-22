@@ -43,13 +43,14 @@ class Offer(Base):
 - 「客户视图」→「客户订单」：仅改 `nav.customer` 词条（zh 客户订单 / en Customer orders），路由 `/customer` 与页面内容不动。
 - 样式：`.offer-sec`（板块标题）、`.offer-grid`（auto-fill minmax 卡片栅格）、`.offer-card`（surface/border 变量）、`.offer-share`（大号比例数字）、`.offer-badge`（在用标记，文字样式无图标）；≤900px 单列。
 
-## 4. 订单上游列与 mock 隔离（REQ §1.4，用户追加定稿）
+## 4. 订单上游列/筛选、mock 隔离与供应商收益（REQ §1.4/§1.5，用户追加定稿）
 
 - **迁移 0006**：`orders.upstream_code String(32) NOT NULL server_default 'netshort'`；同步 upsert 不写此列（恒取默认），存量订单自动落 netshort。
-- **接口投影**：`OrderRow`/`CustomerOrderRow` 增 `upstream` 字段（值=upstream_code）；CSV 导出**不加**该列（对账工具 export_diff 依赖现有列序，保持不动）。
-- **前端**：OrdersCard 首列 `<th>上游</th>`（普通展示列，不可排序/筛选），数据看板与客户订单共用组件自动同构。
-- **mock 演示 offer**（mock1 30% / mock2 65%，不在用，描述注明演示）：`tools/seed_mock_offers.py` 幂等 upsert，只写开发库，**不进迁移**。
-- **隔离红线**：mock 上游的演示订单今后独立建表（如 mock_orders），绝不进 orders；已写入 REQ §1.4 与 CLAUDE.md 口径约束等价约束。
+- **上游筛选**：`orders_query(upstream=…)` SQL 过滤；两订单接口加 `upstream` 参数 + 响应 `upstreams`（区间动态选项，`range_upstreams` 升序去重）；前端筛选框与币种同模式（失效回落 all）。CSV 导出**不加**该列（对账工具 export_diff 依赖现有列序，保持不动）。
+- **迁移 0007**：`mock_orders` 表（结构同 orders 子集 + upstream_code，唯一 (upstream_code, order_id)）——**只建表不带数据**，生产恒空表，真实链路不读。
+- **`GET /offers/earnings`**（admin+，`offers_service.offer_earnings`）：在用 offer × {Σincluded 订单 usd_minor（orders ∪ mock_orders 分表聚合）× supplier_share}；全程 Decimal，输出 `money_exact` 真值字符串；响应含合计三件套 + 逐 offer 明细。红线 12 不涉（内部管理页，非对外接口）。
+- **mock 种子**：`tools/seed_mock_data.py`（幂等）：mock1 在用 30%（参与收益）、mock2 仅展示 65%；每 mock 上游 10 笔订单（单号 1..10、$1.00），order_class 用生产同一 `classify_order_no` 打标；只写开发库。
+- **前端收益板块**：OffersPage 第三板块，选择芯片（全部/多选）纯过滤展示（零金额运算），合计行仅「全部」态显示。
 
 ## 5. 任务包
 
@@ -61,23 +62,25 @@ class Offer(Base):
 | B-T2 | 迁移 0005（建表 + netshort 种子） | `alembic/versions/0005_offers.py` |
 | B-T3 | schema + 路由 + 挂载 | `app/schemas/offers.py`、`app/api/v1/offers.py`、`app/api/v1/__init__.py` |
 | B-T4 | 接口测试（角色门禁/形状/排序/空态） | `tests/test_offers_api.py` |
-| B-T5 | 迁移 0006 + Order/OrderRow 上游字段 + 测试 | `alembic/versions/0006_orders_upstream.py`、`app/models/order.py`、`app/schemas/dashboard.py`、`app/api/v1/dashboard.py`、`tests/test_dashboard_api.py` |
+| B-T5 | 迁移 0006 + Order/OrderRow 上游字段/筛选 + 测试 | `alembic/versions/0006_orders_upstream.py`、`app/models/order.py`、`app/services/orders_query.py`、`app/schemas/dashboard.py`、`app/api/v1/dashboard.py`、`tests/test_dashboard_api.py` |
+| B-T6 | MockOrder 模型 + 迁移 0007（空表） | `app/models/mock_order.py`、`alembic/versions/0007_mock_orders.py` |
+| B-T7 | 收益服务 + /offers/earnings + 测试 | `app/services/offers_service.py`、`app/api/v1/offers.py`、`tests/test_offers_api.py` |
 
 **frontend-task**
 
 | # | 任务 | 文件 |
 |---|---|---|
 | F-T1 | api 函数 | `src/api/offers.js` |
-| F-T2 | OffersPage | `src/pages/OffersPage.jsx` |
+| F-T2 | OffersPage（三板块 + 收益选择器） | `src/pages/OffersPage.jsx` |
 | F-T3 | 路由 + 侧边栏 + 更名 | `src/App.jsx`、`src/components/Sidebar.jsx` |
 | F-T4 | i18n + 样式 | `src/i18n/{zh,en}.json`、`src/styles/dashboard.css` |
-| F-T5 | OrdersCard 首列上游 | `src/components/dashboard/OrdersCard.jsx` |
+| F-T5 | OrdersCard 首列上游 + 上游筛选框 | `src/components/dashboard/OrdersCard.jsx`、`src/dashboard/use{,Customer}Orders.js`、`src/api/dashboard.js`、两页面 |
 
 **tools**
 
 | # | 任务 | 文件 |
 |---|---|---|
-| T-T1 | mock 演示 offer 种子脚本（开发库专用） | `tools/seed_mock_offers.py` |
+| T-T1 | mock 演示数据种子（offer 在用态 + 10 笔订单/上游，开发库专用） | `tools/seed_mock_data.py` |
 
 ## 6. 风险清单
 

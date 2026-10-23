@@ -35,11 +35,13 @@ def add_order(
     promotion_code: str | None = None,
     order_class: str | None = None,
     upstream: str = "netshort",
+    revoked: bool = False,
 ) -> None:
     db.add(
         Order(
             order_id=order_id,
             upstream_code=upstream,
+            revoked_at=datetime.now(UTC) if revoked else None,
             create_time=stamp,
             create_date=date.fromisoformat(stamp[:10]),
             theater_id=theater_id,
@@ -225,6 +227,63 @@ def test_orders_upstream_filter_and_dynamic_options(client, auth, db_session):
     ).json()
     assert [r["order_id"] for r in cust["rows"]] == ["M1"]
     assert cust["upstreams"] == ["mock1", "netshort"]
+
+
+def test_orders_revoked_display_and_filters(client, auth, db_session):
+    """撤单（REQ-20261022-02 §1.7）：status=all 可见（纯展示）且状态=revoked；
+    completed/returned 排除；revoked 筛选隔离；表内计数含撤单（与行集一致）。"""
+    seed_orders(db_session)
+    add_order(
+        db_session, "R1", "2026-10-01 12:00:00", "MXN", "100", usd_minor="6",
+        order_class="included", revoked=True,
+    )
+    body = client.get(f"{API}/orders", params=RANGE, headers=auth).json()
+    assert "R1" in {r["order_id"] for r in body["rows"]}
+    r1 = next(r for r in body["rows"] if r["order_id"] == "R1")
+    assert r1["status"] == "revoked"
+    assert body["total_in_range"] == 6  # 表内展示口径：含撤单
+    comp = client.get(
+        f"{API}/orders", params={**RANGE, "status": "completed"}, headers=auth
+    ).json()
+    assert "R1" not in {r["order_id"] for r in comp["rows"]}
+    rev = client.get(
+        f"{API}/orders", params={**RANGE, "status": "revoked"}, headers=auth
+    ).json()
+    assert [r["order_id"] for r in rev["rows"]] == ["R1"]
+
+
+def test_customer_orders_exclude_revoked(client, auth, db_session):
+    """撤单不进客户可见数据与计数（REQ §1.7）。"""
+    seed_orders(db_session)
+    add_order(
+        db_session, "R1", "2026-10-01 12:00:00", "MXN", "100", usd_minor="6",
+        order_class="included", revoked=True,
+    )
+    body = client.get(f"{API}/customer-orders", params=RANGE, headers=auth).json()
+    assert "R1" not in {r["order_id"] for r in body["rows"]}
+    assert body["total_in_range"] == 2  # A/C（R1 不进客户计数）
+
+
+def test_summary_excludes_revoked(client, auth, db_session):
+    """撤单不进任何聚合（KPI 口径，REQ §1.7）。"""
+    seed_orders(db_session)
+    add_order(
+        db_session, "R1", "2026-10-01 12:00:00", "MXN", "100", usd_minor="6",
+        order_class="included", revoked=True,
+    )
+    body = client.get(f"{API}/summary", params=RANGE, headers=auth).json()
+    assert body["kpis"]["orders_total"] == 5  # seed 5 笔，R1 不计
+
+
+def test_csv_excludes_revoked(client, auth, db_session):
+    """撤单不进 CSV 导出（REQ §1.7）。"""
+    seed_orders(db_session)
+    add_order(
+        db_session, "R1", "2026-10-01 12:00:00", "MXN", "100", usd_minor="6",
+        order_class="included", revoked=True,
+    )
+    resp = client.get(f"{API}/orders.csv", params={**RANGE, "scope": "all"}, headers=auth)
+    assert "R1" not in resp.content.decode("utf-8")
 
 
 def test_orders_usd_sort_null_semantics(client, auth, db_session):

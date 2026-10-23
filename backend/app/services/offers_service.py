@@ -32,7 +32,7 @@ def _source_sums(db: Session) -> dict[str, tuple[int, Decimal]]:
                 func.count(),
                 func.coalesce(func.sum(model.usd_order_amount_minor), _ZERO),
             )
-            .where(model.order_class == "included")
+            .where(model.order_class == "included", model.revoked_at.is_(None))
             .group_by(model.upstream_code)
         ).all()
 

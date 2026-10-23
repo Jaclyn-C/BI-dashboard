@@ -54,6 +54,8 @@ class MockOrder(Base):
     )
     #: 同一分类器规则打标（sha256(salt:order_id) < 0.8 → included）
     order_class: Mapped[str] = mapped_column(String(16), nullable=False)
+    #: 与 orders.revoked_at 对称（收益聚合统一排除条件）；mock 侧实际恒 NULL
+    revoked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=func.now(), server_default=func.now()
     )

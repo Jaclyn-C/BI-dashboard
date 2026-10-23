@@ -103,11 +103,12 @@ def test_unauthenticated_401(client):
 # ---------- 供应商收益（REQ §1.5）----------
 
 
-def make_real_order(db, order_id, *, usd_minor="100", order_class="included"):
+def make_real_order(db, order_id, *, usd_minor="100", order_class="included", revoked=False):
     db.add(
         Order(
             order_id=order_id,
             upstream_code="netshort",
+            revoked_at=dt.datetime.now(dt.UTC) if revoked else None,
             create_time=f"2026-10-01 1{order_id}:00:00",
             create_date=dt.date(2026, 10, 1),
             theater_id="TH",
@@ -176,6 +177,19 @@ def test_earnings_admin_sees_per_offer_and_total(client, db_session):
     assert body["total_order_usd"] == "6.50"
     assert body["total_supplier_earnings_usd"] == "2.65"
     assert body["total_order_count"] == 6
+
+
+def test_earnings_excludes_revoked(client, db_session):
+    """撤单不进收益计算（REQ §1.7）：同一在用 offer，撤单行不计金额与数量。"""
+    _, headers = make_user(db_session, "a@example.com", "admin")
+    make_offer(db_session, "netshort", share="0.5000", in_use=True)
+    make_real_order(db_session, "1", usd_minor="100", order_class="included")
+    make_real_order(db_session, "2", usd_minor="100", order_class="included", revoked=True)
+    body = client.get(f"{API}/earnings", headers=headers).json()
+    row = body["earnings"][0]
+    assert row["order_count"] == 1
+    assert row["order_total_usd"] == "1.00"
+    assert row["supplier_earnings_usd"] == "0.50"
 
 
 def test_earnings_in_use_offer_without_orders_shows_zero(client, db_session):

@@ -5,6 +5,8 @@
 2. orders 阶段：日窗并发拉取（ThreadPoolExecutor，HTTP 并行）→ 汇集后
    单会话串行 upsert（会话非线程安全；分批 500 行 on_conflict_do_update，
    以 orderId 去重，AC-S3 幂等）→ 规范化映射（AC-U3）→ 独立 commit；
+   → 撤单比对（REQ-20261022-02 §1.7）：完整拉取日逐日 diff，本地有上游无
+   标 revoked_at、重新出现恢复；截断/失败日不比对（防不完整数据误撤）；
 3. ad 阶段：fetch_ad_summary → 按日 upsert ad_revenue_daily → 独立 commit
    （AC-S9：广告失败不回滚订单）；
 4. 收尾更新 run 行（status/truncated_dates/counts/errors/finished_at）。
@@ -23,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
-from sqlalchemy import func, select, update
+from sqlalchemy import false, func, select, true, update
 
 from app.config import Settings, get_settings
 from app.db import SessionLocal
@@ -192,10 +194,46 @@ def upsert_orders(
         stmt = stmt.on_conflict_do_update(
             index_elements=[Order.order_id],
             set_={col: getattr(stmt.excluded, col) for col in _ORDER_UPDATE_COLUMNS}
-            | {"updated_at": func.now()},
+            # 重新出现即恢复（REQ-20261022-02 §1.7）；撤单判定归 apply_revocations
+            | {"updated_at": func.now(), "revoked_at": None},
         )
         db.execute(stmt)
     return len(values)
+
+
+def apply_revocations(db, day_ids: dict[date, set[str]]) -> tuple[int, int]:
+    """逐日撤单比对（REQ-20261022-02 §1.7，用户定稿：撤单不参与任何计算）。
+
+    对每个**完整拉取成功**日：本地该日订单与上游 order_id 集合 diff——
+    本地有上游无 → 标 revoked_at（已撤单）；上游有且本地已撤 → 恢复 NULL
+    （上游数据抖动自愈）。order_class 不动（红线：分类标签只写一次）。
+    返回 (撤销数, 恢复数)；独立 commit。
+    """
+    revoked = 0
+    revived = 0
+    for day, up_ids in day_ids.items():
+        gone = (
+            update(Order)
+            .where(
+                Order.create_date == day,
+                Order.revoked_at.is_(None),
+                Order.order_id.not_in(up_ids) if up_ids else true(),
+            )
+            .values(revoked_at=func.now())
+        )
+        revoked += db.execute(gone).rowcount or 0
+        back = (
+            update(Order)
+            .where(
+                Order.create_date == day,
+                Order.revoked_at.is_not(None),
+                Order.order_id.in_(up_ids) if up_ids else false(),
+            )
+            .values(revoked_at=None)
+        )
+        revived += db.execute(back).rowcount or 0
+    db.commit()
+    return revoked, revived
 
 
 def upsert_ad_revenue(db, summary: dict[date, Decimal]) -> int:
@@ -472,6 +510,8 @@ def execute_run(
     ad_error: str | None = None
     truncated: set[date] = set()
     fetched_rows: list[dict] = []
+    # 完整拉取成功日的上游 order_id 集合（撤单比对输入；截断/失败日不进）
+    day_upstream_ids: dict[date, set[str]] = {}
     orders_upserted = 0
 
     client: UpstreamClient = (client_factory or UpstreamClient)()
@@ -488,6 +528,10 @@ def execute_run(
                         fetched_rows.extend(result.rows)
                         if result.truncated:
                             truncated.add(day)
+                        else:
+                            day_upstream_ids[day] = {
+                                str(row["orderId"]) for row in result.rows if row.get("orderId")
+                            }
                     except UpstreamError as exc:
                         # 失败窗口留给下一轮 30 分钟同步或手动刷新自愈（AC-U7）
                         logger.warning("fetch_day %s failed: %s", day, exc)
@@ -504,6 +548,9 @@ def execute_run(
                 raise ValueError("classifier returned NULL order_class for some orders")
             orders_upserted = upsert_orders(db, normalized)
             db.commit()  # orders 阶段独立 commit
+            revoked_n, revived_n = apply_revocations(db, day_upstream_ids)
+            if revoked_n or revived_n:
+                logger.info("revocation diff: %d revoked, %d revived", revoked_n, revived_n)
         except Exception as exc:  # noqa: BLE001 - 阶段失败统一降级，不裸抛 500
             db.rollback()
             logger.exception("orders phase failed")

@@ -19,7 +19,7 @@ TABLE_PAGE_SIZE = 25
 
 SortKey = Literal["date", "currency", "amount", "usd"]
 SortDir = Literal["asc", "desc"]
-StatusFilter = Literal["all", "completed", "returned"]
+StatusFilter = Literal["all", "completed", "returned", "revoked"]  # revoked=已撤单（REQ §1.7）
 ClassFilter = Literal["all", "included", "excluded"]
 CsvScope = Literal["view", "all"]
 CsvLang = Literal["en", "zh"]
@@ -172,7 +172,7 @@ class OrderRow(BaseModel):
     amount: str
     usd: str | None  # 缺失 → null（前端渲染 —）
     order_class: str | None = None  # tag 真值（REQ-20261014-01）；NULL 仅存量未回填防御
-    status: Literal["completed", "returned"]
+    status: Literal["completed", "returned", "revoked"]  # 撤单优先于退款展示（REQ §1.7）
 
 
 class OrdersResponse(BaseModel):

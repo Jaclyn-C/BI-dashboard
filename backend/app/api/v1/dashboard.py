@@ -150,7 +150,12 @@ def orders(
                     else None
                 ),
                 order_class=row.order_class,  # tag 真值（REQ-20261014-01）
-                status="returned" if row.is_returned else "completed",
+                # 撤单优先于退款展示（REQ-20261022-02 §1.7）
+                status=(
+                    "revoked"
+                    if row.revoked_at is not None
+                    else ("returned" if row.is_returned else "completed")
+                ),
             )
             for row in rows
         ],
@@ -192,9 +197,12 @@ def customer_orders(
         status=status,
         order_class="included",
         upstream=upstream,
+        revoked="exclude",  # 撤单不进客户可见数据（REQ §1.7）
     )
     total = db.scalar(select(func.count()).select_from(base.subquery())) or 0
-    base_all = orders_query.orders_query(date_from, date_to, order_class="included")
+    base_all = orders_query.orders_query(
+        date_from, date_to, order_class="included", revoked="exclude"
+    )
     total_in_range = db.scalar(select(func.count()).select_from(base_all.subquery())) or 0
 
     stmt = orders_query.apply_sort(base, sort, direction).offset(

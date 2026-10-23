@@ -30,17 +30,27 @@ def orders_query(
     status: StatusFilter = "all",
     order_class: ClassFilter = "all",
     upstream: str = "all",
+    revoked: str = "include",
 ) -> Select:
     """区间 + 筛选的基础查询（未排序未分页）。class 筛选 REQ-20261014-01 §六；
-    upstream 筛选 REQ-20261022-02 §1.4。
+    upstream 筛选 REQ-20261022-02 §1.4；撤单（§1.7）：
+    - status：completed/returned 自动排除撤单；revoked 仅撤单；
+    - revoked 参数：include（内部订单表，status=all 时撤单可见=纯展示）/
+      exclude（客户视图与 CSV 等计算链路）/ only。
     """
     stmt = select(Order).where(Order.create_date >= date_from, Order.create_date <= date_to)
     if currency and currency != "all":
         stmt = stmt.where(Order.currency_type == currency)
+    if revoked == "exclude":
+        stmt = stmt.where(Order.revoked_at.is_(None))
+    elif revoked == "only":
+        stmt = stmt.where(Order.revoked_at.is_not(None))
     if status == "completed":
-        stmt = stmt.where(Order.is_returned.is_(False))
+        stmt = stmt.where(Order.is_returned.is_(False), Order.revoked_at.is_(None))
     elif status == "returned":
-        stmt = stmt.where(Order.is_returned.is_(True))
+        stmt = stmt.where(Order.is_returned.is_(True), Order.revoked_at.is_(None))
+    elif status == "revoked":
+        stmt = stmt.where(Order.revoked_at.is_not(None))
     if order_class != "all":
         stmt = stmt.where(Order.order_class == order_class)
     if upstream and upstream != "all":
@@ -57,10 +67,14 @@ def apply_sort(stmt: Select, sort: SortKey, direction: SortDir) -> Select:
 
 
 def range_currencies(db, date_from: date, date_to: date) -> list[str]:
-    """区间内动态币种选项（升序去重，AC-O2）。"""
+    """区间内动态币种选项（升序去重，AC-O2）；撤单不参与（§1.7）。"""
     rows = db.execute(
         select(Order.currency_type)
-        .where(Order.create_date >= date_from, Order.create_date <= date_to)
+        .where(
+            Order.create_date >= date_from,
+            Order.create_date <= date_to,
+            Order.revoked_at.is_(None),
+        )
         .distinct()
         .order_by(Order.currency_type)
     ).scalars()
@@ -68,10 +82,14 @@ def range_currencies(db, date_from: date, date_to: date) -> list[str]:
 
 
 def range_upstreams(db, date_from: date, date_to: date) -> list[str]:
-    """区间内动态上游选项（升序去重，REQ-20261022-02 §1.4 筛选框选项）。"""
+    """区间内动态上游选项（升序去重，REQ-20261022-02 §1.4 筛选框选项）；撤单不参与。"""
     rows = db.execute(
         select(Order.upstream_code)
-        .where(Order.create_date >= date_from, Order.create_date <= date_to)
+        .where(
+            Order.create_date >= date_from,
+            Order.create_date <= date_to,
+            Order.revoked_at.is_(None),
+        )
         .distinct()
         .order_by(Order.upstream_code)
     ).scalars()

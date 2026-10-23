@@ -175,6 +175,7 @@ def iter_customer_csv_chunks(
             currency=currency,
             status=status,  # type: ignore[arg-type]
             order_class="included",
+            revoked="exclude",  # 撤单不进任何导出/计算链路（REQ §1.7）
         ),
         sort,  # type: ignore[arg-type]
         direction,  # type: ignore[arg-type]
@@ -213,7 +214,11 @@ def iter_csv_chunks(
         # 数据集 class 仍是外层范围（REQ §3.4：CSV 两档都只含当前数据集）；
         # scope=all 只忽略表格级筛选（币种/状态/排序），create_time desc 固定序
         stmt = apply_sort(
-            orders_query(date_from, date_to, order_class=order_class), "date", "desc"
+            orders_query(
+                date_from, date_to, order_class=order_class, revoked="exclude"
+            ),  # 撤单不进导出（REQ §1.7）
+            "date",
+            "desc",
         )
     else:
         stmt = apply_sort(
@@ -223,6 +228,7 @@ def iter_csv_chunks(
                 currency=currency,
                 status=status,  # type: ignore[arg-type]
                 order_class=order_class,
+                revoked="exclude",  # 撤单不进导出（REQ §1.7）
             ),
             sort,  # type: ignore[arg-type]
             direction,  # type: ignore[arg-type]

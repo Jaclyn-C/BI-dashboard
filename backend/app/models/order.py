@@ -71,6 +71,10 @@ class Order(Base):
     promotion_code: Mapped[str | None] = mapped_column(String(64))
     #: B1 恒 NULL（分类器空实现），CHECK 见 __table_args__
     order_class: Mapped[str | None] = mapped_column(String(16))
+    #: 上游撤单时间（REQ-20261022-02 §1.7）：NULL=正常；非空=上游已将该单从
+    #: 订单列表撤下（同步逐日比对发现）。与 order_class 正交——分类标签永不
+    #: 改动，撤单单不参与任何业务计算（聚合/客户视图/CSV/收益），仅订单表展示。
+    revoked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=func.now(), server_default=func.now()
     )

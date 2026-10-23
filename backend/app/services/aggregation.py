@@ -115,7 +115,11 @@ def build_summary(
         Order.usd_order_amount_minor,
         Order.is_returned,
         Order.order_class,
-    ).where(Order.create_date >= date_from, Order.create_date <= date_to)
+    ).where(
+        Order.create_date >= date_from,
+        Order.create_date <= date_to,
+        Order.revoked_at.is_(None),  # 撤单不参与任何聚合（REQ-20261022-02 §1.7）
+    )
     if order_class != "all":
         stmt = stmt.where(Order.order_class == order_class)
     rows = db.execute(stmt).all()

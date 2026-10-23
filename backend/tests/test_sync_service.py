@@ -510,3 +510,46 @@ def test_truncated_days_in_range_filters_by_window(db_session):
     assert sync_service.truncated_days_in_range(
         db_session, date(2026, 10, 5), date(2026, 10, 6)
     ) == []
+
+
+# ---------- 撤单比对（REQ-20261022-02 §1.7）----------
+
+
+def _same_day_rows():
+    """O1/O2 同日（10-01）两条上游行，便于单日全量比对。"""
+    return [
+        dict(sample_rows()[0]),
+        {**sample_rows()[1], "createTime": "2026-10-01 11:30:00"},
+    ]
+
+
+def _run(db_session, day_rows, page_size=1000):
+    fake = FakeSyncUpstream({"2026-10-01": day_rows}, page_size=page_size)
+    return sync_service.execute_run(
+        "manual", [date(2026, 10, 1)], db=db_session,
+        client_factory=fake.client, settings=fake.settings,
+    )
+
+
+def test_execute_run_revokes_and_revives_on_full_day_diff(db_session):
+    """完整日 diff：本地有上游无 → 标撤单；重新出现 → 恢复。"""
+    rows = _same_day_rows()
+    _run(db_session, rows)  # 全量入库
+    _run(db_session, [rows[0]])  # 上游只剩 O1 → O2 撤单
+    o1, o2 = db_session.scalars(select(Order).order_by(Order.order_id)).all()
+    assert o1.revoked_at is None
+    assert o2.revoked_at is not None
+    _run(db_session, rows)  # O2 重新出现 → 恢复
+    o1, o2 = db_session.scalars(select(Order).order_by(Order.order_id)).all()
+    assert o1.revoked_at is None and o2.revoked_at is None
+
+
+def test_execute_run_truncated_day_skips_revocation(db_session):
+    """截断日不做撤单比对（窗口数据不完整，防误撤）。"""
+    rows = _same_day_rows()
+    _run(db_session, rows)  # 全量入库
+    # 上游只回 O1，但 page_size=1 → 每窗整页 → truncated → 不比对
+    run = _run(db_session, [rows[0]], page_size=1)
+    assert run.truncated_dates == ["2026-10-01"]
+    o1, o2 = db_session.scalars(select(Order).order_by(Order.order_id)).all()
+    assert o1.revoked_at is None and o2.revoked_at is None  # O2 未被误撤

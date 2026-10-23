@@ -171,6 +171,7 @@
     "hColor": "Color",
     "stCompleted": "Completed",
     "stReturned": "Returned",
+    "stRevoked": "Revoked",
     "clIncluded": "Included",
     "clExcluded": "Excluded",
     "fAllCurrencies": "All currencies",

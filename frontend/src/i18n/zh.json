@@ -171,6 +171,7 @@
     "hColor": "颜色",
     "stCompleted": "已完成",
     "stReturned": "已退款",
+    "stRevoked": "已撤单",
     "clIncluded": "已计入",
     "clExcluded": "被剔除",
     "fAllCurrencies": "全部币种",

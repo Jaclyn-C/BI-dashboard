@@ -91,7 +91,16 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
           </thead>
           <tbody>
             {rows.map((o) => (
-              <tr key={o.order_id} className={o.order_class === 'excluded' ? 'row-excluded' : undefined}>
+              <tr
+                key={o.order_id}
+                className={
+                  o.status === 'revoked'
+                    ? 'row-revoked'
+                    : o.order_class === 'excluded'
+                      ? 'row-excluded'
+                      : undefined
+                }
+              >
                 <td className="muted">{o.upstream}</td>
                 <td className="mono">{o.order_id}</td>
                 <td>{o.create_time}</td>
@@ -101,7 +110,9 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
                 <td className="num">{o.usd == null ? '—' : money(fmt, o.usd)}</td>
                 {hideClass ? null : <td className="muted">{classLabel(t, o.order_class)}</td>}
                 <td>
-                  {o.status === 'returned' ? (
+                  {o.status === 'revoked' ? (
+                    <span className="chip-status revoked">{t('dashboard.stRevoked')}</span>
+                  ) : o.status === 'returned' ? (
                     <span className="chip-status returned">{`↩ ${t('dashboard.stReturned')}`}</span>
                   ) : (
                     <span className="chip-status completed">{`✓ ${t('dashboard.stCompleted')}`}</span>
@@ -199,6 +210,7 @@ export default function OrdersCard({ data, fmt, filters, classValue, classLocked
             <option value="all">{t('dashboard.fAllStatuses')}</option>
             <option value="completed">{t('dashboard.stCompleted')}</option>
             <option value="returned">{t('dashboard.stReturned')}</option>
+            {hideClass ? null : <option value="revoked">{t('dashboard.stRevoked')}</option>}
           </select>
         </div>
       </div>

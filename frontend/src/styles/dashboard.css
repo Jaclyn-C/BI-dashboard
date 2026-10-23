@@ -697,6 +697,14 @@ th .arrow {
   background: rgba(208, 59, 59, 0.12);
   color: var(--crit);
 }
+/* 已撤单（REQ-20261022-02 §1.7）：中性灰、纯展示行 */
+.chip-status.revoked {
+  background: var(--series-softer);
+  color: var(--muted);
+}
+.row-revoked {
+  opacity: 0.55;
+}
 .muted {
   color: var(--muted);
 }

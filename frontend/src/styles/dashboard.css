@@ -1225,6 +1225,8 @@ tbody tr.row-excluded:hover {
   color: var(--ink2);
   box-shadow: var(--shadow);
   cursor: pointer;
+  user-select: none;
+  touch-action: none; /* 浮窗按钮自身可拖动（REQ-20261023-01 v2） */
 }
 .calc-fab:hover {
   color: var(--ink);
@@ -1315,4 +1317,7 @@ tbody tr.row-excluded:hover {
   background: var(--series-soft);
   color: var(--series);
   font-weight: 500;
+}
+.calc-btn.wide {
+  grid-column: 1 / -1; /* 等号整行 */
 }

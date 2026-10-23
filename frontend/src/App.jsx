@@ -3,6 +3,7 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 
 import useAuth from './auth/useAuth'
+import CalculatorWidget from './components/Calculator'
 import DashboardPage from './pages/DashboardPage'
 import CustomerViewPage from './pages/CustomerViewPage'
 import OffersPage from './pages/OffersPage'
@@ -56,7 +57,10 @@ function PendingOnly({ children }) {
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      {/* 悬浮计算器挂在路由外（REQ-20261023-01）：不绑定页面，切换路由不消失 */}
+      <CalculatorWidget />
+      <Routes>
       <Route
         path="/login"
         element={
@@ -132,6 +136,7 @@ export default function App() {
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   )
 }

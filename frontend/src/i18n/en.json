@@ -267,6 +267,12 @@
     "title": "Waiting for access",
     "hint": "Your account is created. An administrator will assign your access."
   },
+  "calc": {
+    "title": "Calculator",
+    "open": "Calculator",
+    "close": "Close",
+    "error": "Error"
+  },
   "users": {
     "title": "User Management",
     "loading": "Loading…",

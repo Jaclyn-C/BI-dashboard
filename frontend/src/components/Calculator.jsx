@@ -43,6 +43,7 @@ export default function CalculatorWidget() {
   const [open, setOpen] = useState(false)
   const [pos, setPos] = useState(null) // null=CSS 默认锚定（右下）；拖动后为 {x,y}
   const [display, setDisplay] = useState('0')
+  const [expr, setExpr] = useState('') // 算式行（REQ-20261023-01 §1.2）：全程可见所按数字与运算符
   const [acc, setAcc] = useState(null)
   const [op, setOp] = useState(null)
   const [waiting, setWaiting] = useState(false) // 刚按过运算符/等号，下一数字重新起头
@@ -53,21 +54,27 @@ export default function CalculatorWidget() {
 
   const reset = useCallback(() => {
     setDisplay('0')
+    setExpr('')
     setAcc(null)
     setOp(null)
     setWaiting(false)
     setError(false)
   }, [])
 
-  const inputDigit = useCallback((d) => {
-    if (error) reset()
-    setDisplay((prev) => {
-      const base = error || waiting ? '0' : prev
-      if (waiting) setWaiting(false)
-      if (base === '0') return d
-      return base.length < MAX_INPUT_LEN ? base + d : base
-    })
-  }, [error, waiting, reset])
+  const inputDigit = useCallback(
+    (d) => {
+      if (error) reset()
+      // 等号之后输入新数字 = 新起一式，算式行清空（按运算符则用结果续算，不清）
+      if (waiting && op === null && !error) setExpr('')
+      setDisplay((prev) => {
+        const base = error || waiting ? '0' : prev
+        if (waiting) setWaiting(false)
+        if (base === '0') return d
+        return base.length < MAX_INPUT_LEN ? base + d : base
+      })
+    },
+    [error, waiting, op, reset],
+  )
 
   const inputDot = useCallback(() => {
     if (error) reset()
@@ -83,6 +90,7 @@ export default function CalculatorWidget() {
       if (error) return
       const cur = Number.parseFloat(display)
       if (op !== null && !waiting) {
+        // 连续运算：先结算左半边，算式行续接（如 "12 + 5 ×"）
         const r = compute(acc, cur, op)
         if (r === null) {
           setError(true)
@@ -90,8 +98,10 @@ export default function CalculatorWidget() {
         }
         setAcc(r)
         setDisplay(fmtNum(r) ?? '0')
+        setExpr((prev) => `${prev} ${display} ${next}`)
       } else {
         setAcc(cur)
+        setExpr(`${display} ${next}`) // 新起一式（含等号后用结果续算）
       }
       setOp(next)
       setWaiting(true)
@@ -107,6 +117,7 @@ export default function CalculatorWidget() {
       return
     }
     setDisplay(fmtNum(r) ?? '0')
+    setExpr((prev) => `${prev} ${display} =`)
     setAcc(null)
     setOp(null)
     setWaiting(true)
@@ -127,8 +138,12 @@ export default function CalculatorWidget() {
     setDisplay((prev) => fmtNum(Number.parseFloat(prev) / 100) ?? '0')
   }, [error])
 
-  // ---- 拖动（标题栏 Pointer Events；钳制在视口内）----
-  const onHeadPointerDown = (e) => {
+  // ---- 拖动（整个面板任意位置可拖，按键除外；Pointer Events；钳制视口内）----
+  // 按下目标是按钮时不启动拖动/捕获——setPointerCapture 会吞掉按钮的 click
+  // （曾导致【关闭】关不上），必须避开。
+  const onPanelPointerDown = (e) => {
+    if (e.button !== 0) return
+    if (e.target instanceof Element && e.target.closest('button')) return
     const panel = panelRef.current
     if (!panel) return
     const rect = panel.getBoundingClientRect()
@@ -143,16 +158,18 @@ export default function CalculatorWidget() {
     }
     e.currentTarget.setPointerCapture(e.pointerId)
   }
-  const onHeadPointerMove = (e) => {
+  const onPanelPointerMove = (e) => {
     const d = dragRef.current
     if (!d) return
     const x = Math.min(Math.max(0, d.originX + e.clientX - d.startX), window.innerWidth - d.w)
     const y = Math.min(Math.max(0, d.originY + e.clientY - d.startY), window.innerHeight - d.h)
     setPos({ x, y })
   }
-  const onHeadPointerUp = (e) => {
+  const onPanelPointerUp = (e) => {
     dragRef.current = null
-    e.currentTarget.releasePointerCapture(e.pointerId)
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
   }
 
   // ---- 键盘（面板打开时）----
@@ -204,20 +221,23 @@ export default function CalculatorWidget() {
           role="dialog"
           aria-label={t('calc.title')}
           style={pos ? { left: pos.x, top: pos.y } : undefined}
+          onPointerDown={onPanelPointerDown}
+          onPointerMove={onPanelPointerMove}
+          onPointerUp={onPanelPointerUp}
         >
-          <div
-            className="calc-head"
-            onPointerDown={onHeadPointerDown}
-            onPointerMove={onHeadPointerMove}
-            onPointerUp={onHeadPointerUp}
-          >
+          <div className="calc-head">
             <span className="calc-title">{t('calc.title')}</span>
             <button type="button" className="calc-close" onClick={() => setOpen(false)}>
               {t('calc.close')}
             </button>
           </div>
-          <div className="calc-display" aria-live="polite">
-            {error ? t('calc.error') : display}
+          <div className="calc-display">
+            <div className="calc-expr" aria-hidden="true">
+              {expr || ' '}
+            </div>
+            <div className="calc-main" aria-live="polite">
+              {error ? t('calc.error') : display}
+            </div>
           </div>
           <div className="calc-keys">
             {btn('C', reset, 'fn')}

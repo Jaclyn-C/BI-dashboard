@@ -1240,15 +1240,15 @@ tbody tr.row-excluded:hover {
   border-radius: 14px;
   box-shadow: var(--shadow);
   padding: 8px;
+  cursor: move; /* 整个面板可拖（按键除外，见组件内 closest('button') 守卫） */
+  user-select: none;
+  touch-action: none; /* 触屏拖动不被滚动劫持 */
 }
 .calc-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 6px 8px 8px;
-  cursor: move; /* 拖动手柄 */
-  user-select: none;
-  touch-action: none; /* 触屏拖动不被滚动劫持 */
 }
 .calc-title {
   font-size: 12.5px;
@@ -1269,14 +1269,23 @@ tbody tr.row-excluded:hover {
 }
 .calc-display {
   text-align: right;
-  font-size: 21px;
-  font-weight: 500;
   padding: 6px 12px 10px;
-  min-height: 40px;
-  white-space: nowrap;
-  overflow-x: auto;
   border-bottom: 1px solid var(--grid);
   margin-bottom: 8px;
+}
+.calc-expr {
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 16px;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+.calc-main {
+  font-size: 21px;
+  font-weight: 500;
+  min-height: 28px;
+  white-space: nowrap;
+  overflow-x: auto;
 }
 .calc-keys {
   display: grid;
@@ -1290,7 +1299,7 @@ tbody tr.row-excluded:hover {
   background: var(--surface);
   color: var(--ink);
   font-size: 14px;
-  cursor: pointer;
+  cursor: pointer; /* 覆盖面板的 move 光标 */
 }
 .calc-btn:hover {
   background: var(--series-softer);
